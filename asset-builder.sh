@@ -26,7 +26,7 @@ do
   asset_name=`basename -s .png $sprite | sed "s/-/_/g"`
   
   # Generate the packed data
-  $SPRITEBUILDER --arrayname m_sprite_$asset_name packed $sprite >> assets.h
+  $SPRITEBUILDER packed --arrayname m_sprite_$asset_name $sprite >> assets.h
   
   # And push this asset into the generated set
   asset_list+=($asset_name)

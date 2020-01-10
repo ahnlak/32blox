@@ -1,5 +1,5 @@
 /*
- * splash.hpp - part of 32Blox, a breakout game for the 32blit built to
+ * splash.cpp - part of 32Blox, a breakout game for the 32blit built to
  * explore the API.
  *
  * This file handles the rendering of the splash screen, shown on startup and
@@ -35,11 +35,24 @@ using namespace blit;
  * splash_update - cycle the state of the splash for animation purposes. 
  *
  * uint32_t - the gametick so that we animate at a known rate.
+ * 
+ * Returns gamestate_t, the state to continue in. Should either be SPLASH, 
+ * or GAME when the user is ready to play.
  */
 
-void splash_update( uint32_t p_time )
+gamestate_t splash_update( uint32_t p_time )
 {
+  /* Update the flickering prompt text. */
   m_text_colour = rgba( p_time % 255, ( p_time % 512 ) / 2, 255 - (p_time % 255), 255 );
+  
+  /* Check to see if the player has pressed the start button. */
+  if ( blit::pressed( blit::button::A ) )
+  {
+    return STATE_GAME;
+  }
+  
+  /* Default to the status quo, then. */
+  return STATE_SPLASH;
 }
 
 
@@ -71,11 +84,11 @@ void splash_render( void )
   sprite_render( "brick_yellow", 304, 224 );
   
   /* Drop in the main logo nice and central(ish). */
-  sprite_render( "logo", 35, 25 );
+  sprite_render( "logo", -1, 25 );
   
   /* Lastly, the text inviting the user to press the start button. */
   fb.pen( m_text_colour );
-  fb.text( "Press 'A' to start", &outline_font[0][0], point( 50, 170 ), true );
+  fb.text( "P R E S S  ' A '  T O   S T A R T", &outline_font[0][0], point( 94, 180 ), true );
 }
 
 

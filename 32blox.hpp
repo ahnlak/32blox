@@ -33,14 +33,18 @@ typedef enum {
 
 /* Function prototypes. */
 
-void init( void );
-void update( uint32_t );
-void render( uint32_t );
+void        init( void );
+void        update( uint32_t );
+void        render( uint32_t );
 
-void splash_render( void );
-void splash_update( uint32_t );
+void        game_init( void );
+void        game_render( void );
+gamestate_t game_update( uint32_t );
 
-void sprite_render( const char *, uint16_t, uint16_t );
+void        splash_render( void );
+gamestate_t splash_update( uint32_t );
+
+void        sprite_render( const char *, int16_t, int16_t );
 
 
 #endif /* _32BLOCK_HPP_ */

@@ -44,6 +44,9 @@ void init( void )
   /* And blank the screen. */
   fb.pen( rgba( 100, 0, 0, 255 ) );
   fb.clear();
+  
+  /* Set the initial gamestate (which should be redundant, but...) */
+  m_gamestate = STATE_SPLASH;
 
 }
 
@@ -61,8 +64,15 @@ void update( uint32_t p_time )
   switch( m_gamestate ) {
 
     case STATE_SPLASH:      /* Show the user a simple splash screen. */
-      splash_update( p_time );
+      m_gamestate = splash_update( p_time );
+      if ( m_gamestate == STATE_GAME )
+      {
+        game_init();
+      }
       break;
+      
+    case STATE_GAME:        /* The player is, well, playing! */
+      m_gamestate = game_update( p_time );
 
     default:                /* Erk! This should Not Be Possible. */
       break;
@@ -86,8 +96,13 @@ void render( uint32_t p_time )
     case STATE_SPLASH:      /* Show the user a simple splash screen. */
       splash_render();
       break;
+      
+    case STATE_GAME:        /* The player is, well, playing! */
+      game_render();
+      break;
 
     default:                /* Erk! This should Not Be Possible. */
+      return;
       break;
 
   }

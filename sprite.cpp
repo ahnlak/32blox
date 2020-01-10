@@ -1,5 +1,5 @@
 /*
- * sprite.hpp - part of 32Blox, a breakout game for the 32blit built to
+ * sprite.cpp - part of 32Blox, a breakout game for the 32blit built to
  * explore the API.
  *
  * This file contains all the sprite data, in a hopefully easy-to-handle way.
@@ -45,11 +45,11 @@ using namespace blit;
  *                 left corner at the co-ordinates given.
  *
  * const char * - the name of the sprite
- * uint16_t     - row to start drawing from (x)
- * uint16_t     - column to start drawing from (y)
+ * uint16_t     - row to start drawing from (x), or -1 to centre.
+ * uint16_t     - column to start drawing from (y), or -1 to centre.
  */
 
-void sprite_render( const char *p_sprite, uint16_t p_column, uint16_t p_row )
+void sprite_render( const char *p_sprite, int16_t p_column, int16_t p_row )
 {
   int           l_index;
   rgba          l_palette[256];
@@ -59,7 +59,11 @@ void sprite_render( const char *p_sprite, uint16_t p_column, uint16_t p_row )
   uint16_t      l_row, l_column;
   
   /* Step one, sanity check that the co-ords are within the framebuffer. */
-/*__RETURN__*/
+  if ( ( p_row < -1 ) || ( p_column < -1 ) ||
+       ( p_row > fb.bounds.h ) || ( p_column > fb.bounds.w ) )
+  {
+    return;
+  }
 
   /* Step two, find the sprite in the lookup table. */
   for( l_index = 0; m_sprites[l_index].name != NULL; l_index++ )
@@ -80,6 +84,16 @@ void sprite_render( const char *p_sprite, uint16_t p_column, uint16_t p_row )
   l_sprite = (packed_image *)m_sprites[l_index].data;
   l_spritedata = m_sprites[l_index].data + sizeof(packed_image);
   l_bitdepth = ceil( log(l_sprite->palette_entry_count) / log(2) );
+  
+  /* Step 3.5, if we're centering we finally have the data to do so! */
+  if ( p_row == -1 )
+  {
+    p_row = ( fb.bounds.h - l_sprite->height ) / 2;
+  }
+  if ( p_column == -1 )
+  {
+    p_column = ( fb.bounds.w - l_sprite->width ) / 2;
+  }
   
   /* Step four, extract the palette into a more useful form. */
   for( l_index = 0; l_index < l_sprite->palette_entry_count; l_index++ )
