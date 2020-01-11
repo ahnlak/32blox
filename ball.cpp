@@ -53,6 +53,7 @@ using namespace blit;
 uint8_t ball_create( uint16_t p_batloc )
 {
   uint8_t l_index;
+  size    l_ballsize = sprite_size( "ball" );
   
   /* Find an empty slot in the ball array. */
   for ( l_index = 0; l_index < MAX_BALLS; l_index++ )
@@ -70,7 +71,7 @@ uint8_t ball_create( uint16_t p_batloc )
   }
   
   /* Good, so initiate the ball as stuck to the bat. */
-  m_balls[l_index].x = fb.bounds.h - 11;
+  m_balls[l_index].x = fb.bounds.h - 8 - ( ( l_ballsize.h+1 ) / 2 );
   m_balls[l_index].y = p_batloc;
   m_balls[l_index].dx = m_balls[l_index].dy = 0;
   m_balls[l_index].stuck = m_balls[l_index].active = true;
@@ -93,24 +94,26 @@ uint8_t ball_spawn( uint8_t )
  * uint8_t - the ball ID being updated
  * uint16_t - the location of the player bat, potentially relavent
  * 
- * Returns a point indicating the new location of the ball.
+ * Returns any score that has been earned by the update, or -1 if the ball died.
  */
 
-point ball_update( uint8_t p_ballid, uint16_t p_batloc )
+int8_t ball_update( uint8_t p_ballid, uint16_t p_batloc, uint8_t p_batwidth )
 {
+  uint8_t  l_score = 0;
   uint16_t l_newx, l_newy;
+  size     l_ballsize = sprite_size( "ball" );
   
   /* Only active, valid balls need apply. */
   if ( ( p_ballid < 0 ) || ( p_ballid >= MAX_BALLS ) || ( !m_balls[p_ballid].active ) )
   {
-    return point( 0, 0 );
+    return 0;
   }
   
   /* If we're stuck to the bat, reflect that. */
   if ( m_balls[p_ballid].stuck )
   {
     m_balls[p_ballid].y = p_batloc;
-    return point( m_balls[p_ballid].y, m_balls[p_ballid].x );
+    return 0;
   }
 
   /* Then we're in free flight! First, calculate the new possible location. */
@@ -118,21 +121,46 @@ point ball_update( uint8_t p_ballid, uint16_t p_batloc )
   l_newy = m_balls[p_ballid].y + m_balls[p_ballid].dy;
   
   /* Check for hard boundaries on the play area itself. */
-  if ( ( l_newx <= 10 ) || ( l_newx >= fb.bounds.h ) )
+  if ( l_newx <= 10 ) 
   {
     m_balls[p_ballid].dx *= -1.0f;
+    l_score++;
   }
   if ( ( l_newy <= 0 ) || ( l_newy >= fb.bounds.w ) )
   {
     m_balls[p_ballid].dy *= -1.0f;
+    l_score++;
   }
+  
+  /* If we've hit the bottom, though, we have bigger problems. */
+  if ( l_newx >= fb.bounds.h )
+  {
+    m_balls[p_ballid].active = 0;
+    return -1;
+  }
+  
+  /* Check to see if we hit the bat. */
+  if ( ( m_balls[p_ballid].dx > 0.0f ) && 
+       ( l_newx >= ( fb.bounds.h - 11 ) ) && 
+       ( m_balls[p_ballid].x < ( fb.bounds.h - 8 - ( ( l_ballsize.h+1 ) / 2 ) ) ) )
+  {
+    /* So, we've crossed the baseline. Check the bat bounds. */
+    if ( ( l_newy >= ( p_batloc - ( p_batwidth / 2 ) ) ) &&
+         ( l_newy <= ( p_batloc + ( p_batwidth / 2 ) ) ) )
+    {
+      m_balls[p_ballid].dx *= -1.0f;
+      l_score++;
+    }
+  }
+  
+  /* Lastly, we need to consider bricks. What row are we on? */
   
   /* Ok, apply the new deltas then and we're done. */
   m_balls[p_ballid].x += m_balls[p_ballid].dx;
   m_balls[p_ballid].y += m_balls[p_ballid].dy;
   
   /* And return the new ball location; probably not needed for now... */
-  return point( m_balls[p_ballid].y, m_balls[p_ballid].x );
+  return l_score;
 }
 
 
@@ -171,9 +199,28 @@ void ball_launch( uint8_t p_ballid )
   }
   
   /* So, all we really do is create a slightly random vector to release on. */
-  m_balls[p_ballid].dx = -0.5;
+  m_balls[p_ballid].dx = -0.75;
   m_balls[p_ballid].dy = -0.5;
   m_balls[p_ballid].stuck = false;
+}
+
+
+/*
+ * ball_stuck - lets us know if the ball is stuck to the bat.
+ * 
+ * uint8_t - the ball ID being queried
+ * 
+ * Returns bool, true if the ball is attached to the bat.
+ */
+
+bool ball_stuck( uint8_t p_ballid ) 
+{
+  if ( ( p_ballid < 0 ) || ( p_ballid >= MAX_BALLS ) || ( !m_balls[p_ballid].active ) )
+  {
+    return false;
+  }
+  
+  return m_balls[p_ballid].stuck;
 }
 
 

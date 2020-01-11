@@ -32,6 +32,7 @@ static const struct { const char *name; uint8_t width; } m_bats[] =
   { NULL, 0 }
 };
 
+static rgba      m_text_colour;
 static uint32_t  m_hiscore;
 static uint32_t  m_score;
 static uint8_t   m_lives;
@@ -39,6 +40,7 @@ static uint8_t   m_level;
 static float     m_player;
 static float     m_speed;
 static uint8_t   m_battype;
+static bool      m_flash;
 static int8_t    m_balls[MAX_BALLS];
 
 
@@ -60,6 +62,7 @@ void game_init( void )
   m_player = fb.bounds.w / 2;
   m_speed = 0.9;
   m_battype = 0;
+  m_flash = false;
   
   /* Initialise that level. */
   level_init( m_level );
@@ -84,7 +87,11 @@ void game_init( void )
 
 gamestate_t game_update( uint32_t p_time )
 {
+  int8_t  l_score;
   uint8_t l_index;
+  
+  /* Update the flickering prompt text. */
+  m_text_colour = rgba( p_time % 255, ( p_time % 512 ) / 2, 255 - (p_time % 255), 255 );
   
   /* See if the player is moving left. */
   if ( ( blit::pressed( blit::button::DPAD_LEFT ) ) || ( blit::joystick.x < -0.1f ) )
@@ -123,8 +130,38 @@ gamestate_t game_update( uint32_t p_time )
   {
     if ( m_balls[l_index] >= 0 )
     {
-      ball_update( m_balls[l_index], m_player );
+      /* The ball update will tell us if there's a score to be earned. */
+      l_score = ball_update( m_balls[l_index], m_player, m_bats[m_battype].width );
+      if ( l_score > 0 )
+      {
+        m_score += l_score;
+      }
+      
+      /* A negative score means it's dipped below the board, and despawned. */
+      if ( l_score < 0 )
+      {
+        m_flash = true;
+        m_balls[l_index] = -1;
+      }
     }
+  }
+  
+  /* If no balls are left in play, a life it lost. If there are more lives, */
+  /* then a fresh ball is spawned. If not, it's game over (man).            */
+  for ( l_index = 0; l_index < MAX_BALLS; l_index++ )
+  {
+    if ( m_balls[l_index] >= 0 )
+    {
+      break;
+    }
+  }
+  if ( l_index == MAX_BALLS )
+  {
+    if ( --m_lives <=0 )
+    {
+      return STATE_DEATH;
+    }
+    m_balls[0] = ball_create( m_player );
   }
   
   /* Default to the status quo, then. */
@@ -143,22 +180,32 @@ void game_render( void )
   uint8_t  *l_line;
   
   /* Clear the screen back to something sensible. */
-  fb.pen( rgba( 0, 0, 0, 255 ) );
+  if ( m_flash )
+  {
+    fb.pen( rgba( 240, 0, 0, 255 ) );
+    m_flash = false;
+  }
+  else
+  {
+    fb.pen( rgba( 0, 0, 0, 255 ) );
+  }
   fb.clear();
   
   /* Render the top status line. */
+#pragma GCC diagnostic ignored "-Wformat"
   fb.pen( rgba( 255, 255, 255, 255 ) );
   sprintf( l_buffer, "HI: %05lu", m_hiscore );
-  fb.text( l_buffer, &minimal_font[0][0], point( 16, 1 ), true );
-  sprintf( l_buffer, "SCORE: %05lu", m_score );
-  fb.text( l_buffer, &minimal_font[0][0], point( 240, 1 ), true );
+  fb.text( l_buffer, &minimal_font[0][0], point( 1, 1 ), true );
+  sprintf( l_buffer, "SC: %05lu", m_score );
+  fb.text( l_buffer, &minimal_font[0][0], point( 115, 1 ), true );
+#pragma GCC diagnostic pop
   
   /* Lives are tricky, we can run out of space... */
-  if ( m_lives < 5 )
+  if ( m_lives < 4 )
   {
     for ( l_index = 0; l_index < m_lives; l_index++ )
     {
-      sprite_render( "bat_normal", 150 - ( ( m_lives - 1 ) * 10 ) + ( l_index * 20 ), 3 );
+      sprite_render( "bat_normal", 72 - ( ( m_lives - 1 ) * 10 ) + ( l_index * 20 ), 3 );
     }
   }
   
@@ -167,13 +214,13 @@ void game_render( void )
   fb.line( point( 0, 9 ), point( fb.bounds.w, 9 ) );
   
   /* Now we draw up the surviving bricks in the level. */
-  for ( l_index = 0; l_index < 20; l_index++ )
+  for ( l_index = 0; l_index < 10; l_index++ )
   {
     /* Fetch the current state, a line at a time. */
     l_line = level_get_line( l_index );
     
     /* And work through a brick at a time. */
-    for ( l_brick = 0; l_brick < 20; l_brick++ )
+    for ( l_brick = 0; l_brick < 10; l_brick++ )
     {
       /* Only try and draw bricks which are actually there... */
       if ( l_line[ l_brick ] > 0 )
@@ -194,6 +241,11 @@ void game_render( void )
     if ( m_balls[l_index] >= 0 )
     {
       ball_render( m_balls[l_index] );
+      if ( ball_stuck( m_balls[l_index] ) )
+      {
+        fb.pen( m_text_colour );
+        fb.text( "PRESS 'Y' TO LAUNCH", &outline_font[0][0], point( 32, 100 ), true );
+      }
     }
   }
   

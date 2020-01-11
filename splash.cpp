@@ -79,24 +79,24 @@ void splash_render( void )
   sprite_render( "brick_yellow", 16, 0 );
   sprite_render( "brick_yellow", 0, 8 );
 
-  sprite_render( "brick_yellow", 288, 0 );
-  sprite_render( "brick_yellow", 304, 0 );
-  sprite_render( "brick_yellow", 304, 8 );
+  sprite_render( "brick_yellow", 128, 0 );
+  sprite_render( "brick_yellow", 144, 0 );
+  sprite_render( "brick_yellow", 144, 8 );
   
-  sprite_render( "brick_yellow", 0, 232 );
-  sprite_render( "brick_yellow", 16, 232 );
-  sprite_render( "brick_yellow", 0, 224 );
+  sprite_render( "brick_yellow", 0, 112 );
+  sprite_render( "brick_yellow", 16, 112 );
+  sprite_render( "brick_yellow", 0, 104 );
 
-  sprite_render( "brick_yellow", 288, 232 );
-  sprite_render( "brick_yellow", 304, 232 );
-  sprite_render( "brick_yellow", 304, 224 );
+  sprite_render( "brick_yellow", 128, 112 );
+  sprite_render( "brick_yellow", 144, 112 );
+  sprite_render( "brick_yellow", 144, 104 );
   
   /* Drop in the main logo nice and central(ish). */
-  sprite_render( "logo", -1, 25 );
+  sprite_render( "logo", -1, 15 );
   
   /* Lastly, the text inviting the user to press the start button. */
   fb.pen( m_text_colour );
-  fb.text( "P R E S S  ' A '  T O   S T A R T", &outline_font[0][0], point( 94, 180 ), true );
+  fb.text( "PRESS 'A' TO START", &outline_font[0][0], point( 34, 100 ), true );
 }
 
 

@@ -169,4 +169,40 @@ void sprite_render( const char *p_sprite, int16_t p_column, int16_t p_row, sprit
   }
 }
 
+
+/*
+ * sprite_size - returns the size of the named sprite.
+ * 
+ * const char * - the name of the sprite in question
+ * 
+ * Returns the size of the sprite
+ */
+
+size sprite_size( const char *p_sprite )
+{
+  uint8_t       l_index;
+  packed_image *l_sprite;
+  
+  /* Step one, find the sprite in the lookup table. */
+  for( l_index = 0; m_sprites[l_index].name != NULL; l_index++ )
+  {
+    if ( strcmp( p_sprite, m_sprites[l_index].name ) == 0 )
+    {
+      break;
+    }
+  }
+
+  /* If we didn't find anything, we can't really proceed any further. */
+  if ( m_sprites[l_index].data == NULL )
+  {
+    return size( 0, 0 );
+  }
+
+  /* Step two, extract some basic metrics about the chosen sprite. */
+  l_sprite = (packed_image *)m_sprites[l_index].data;  
+  
+  return size( l_sprite->width, l_sprite->height );
+}
+
+
 /* End of sprite.cpp */

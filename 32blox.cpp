@@ -38,8 +38,8 @@ using namespace blit;
 void init( void )
 {
 
-  /* Set the screen into hires (320x240) mode. */
-  blit::set_screen_mode( screen_mode::hires );
+  /* Set the screen into lores (160x120) mode. */
+  blit::set_screen_mode( screen_mode::lores );
 
   /* And blank the screen. */
   fb.pen( rgba( 100, 0, 0, 255 ) );
@@ -73,6 +73,11 @@ void update( uint32_t p_time )
       
     case STATE_GAME:        /* The player is, well, playing! */
       m_gamestate = game_update( p_time );
+      break;
+      
+    case STATE_DEATH:       /* The game is done. Save the score. */
+      m_gamestate = STATE_SPLASH;
+      break;
 
     default:                /* Erk! This should Not Be Possible. */
       break;

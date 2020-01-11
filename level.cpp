@@ -27,7 +27,7 @@
 
 /* Module variables. */
 
-static uint8_t m_current_level[20][20];
+static uint8_t m_current_level[10][10];
 
 
 /* Raw level data. */
@@ -49,16 +49,16 @@ using namespace blit;
 void level_init( uint8_t p_level )
 {
   /* Quite easy really, we just copy the whole block of level data. */
-  memcpy( m_current_level, &m_levels[ p_level ], sizeof( uint8_t ) * 400 );
+  memcpy( m_current_level, &m_levels[ p_level ], sizeof( uint8_t ) * 100 );
 }
 
 
 /*
  * level_get_line - returns the current bricks in the requested line. 
  *
- * uint8_t - the line of bricks to fetch, between 0 and 20
+ * uint8_t - the line of bricks to fetch, between 0 and 10
  * 
- * Returns a 20 byte array of brick types.
+ * Returns a 10 byte array of brick types.
  */
  
 uint8_t *level_get_line( uint8_t p_line )
