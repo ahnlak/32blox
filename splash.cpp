@@ -25,8 +25,8 @@
 
 /* Module variables. */
 
-rgba      m_text_colour;
-uint16_t  m_gradient_row;
+static rgba      m_text_colour;
+static uint16_t  m_gradient_row;
 
 /* Functions. */
 

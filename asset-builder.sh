@@ -33,7 +33,7 @@ do
 done
 
 # And lastly, put out the sprite lookup table
-echo "const struct { const char *name; uint8_t *data; } m_sprites[] = {" >> assets.h
+echo "static const struct { const char *name; uint8_t *data; } m_sprites[] = {" >> assets.h
 for asset in ${asset_list[@]}
 do
   echo "{ \"$asset\", m_sprite_$asset }," >> assets.h

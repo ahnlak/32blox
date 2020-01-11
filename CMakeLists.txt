@@ -1,4 +1,4 @@
 cmake_minimum_required(VERSION 2.8.9)
 project (32blox)
 include (../../32blit.cmake)
-blit_executable (32blox 32blox.cpp game.cpp level.cpp splash.cpp sprite.cpp)
+blit_executable (32blox 32blox.cpp ball.cpp game.cpp level.cpp splash.cpp sprite.cpp)

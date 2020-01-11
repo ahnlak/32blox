@@ -24,7 +24,7 @@
 
 /* Module variables. */
 
-gamestate_t m_gamestate = STATE_SPLASH;
+static gamestate_t m_gamestate = STATE_SPLASH;
 
 
 /* Functions. */

@@ -18,6 +18,7 @@
 
 #include <string.h>
 
+
 /* Local headers. */
 
 #include "32blit.hpp"
@@ -26,7 +27,7 @@
 
 /* Module variables. */
 
-uint8_t m_current_level[20][20];
+static uint8_t m_current_level[20][20];
 
 
 /* Raw level data. */

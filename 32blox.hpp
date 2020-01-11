@@ -20,6 +20,9 @@
 
 /* Constants. */
 
+#define MAX_BALLS 5
+
+
 /* Enums. */
 
 typedef enum {
@@ -48,6 +51,12 @@ typedef enum {
 void        init( void );
 void        update( uint32_t );
 void        render( uint32_t );
+
+uint8_t     ball_create( uint16_t );
+uint8_t     ball_spawn( uint8_t );
+point       ball_update( uint8_t, uint16_t );
+void        ball_render( uint8_t );
+void        ball_launch( uint8_t );
 
 void        game_init( void );
 void        game_render( void );

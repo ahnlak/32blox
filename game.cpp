@@ -15,6 +15,9 @@
 
 /* System headers. */
 
+#include <string.h>
+
+
 /* Local headers. */
 
 #include "32blit.hpp"
@@ -23,19 +26,21 @@
 
 /* Module variables. */
 
-const struct { const char *name; uint8_t width; } m_bats[] =
+static const struct { const char *name; uint8_t width; } m_bats[] =
 {
   { "bat_normal", 16 },
   { NULL, 0 }
 };
 
-uint32_t  m_hiscore;
-uint32_t  m_score;
-uint8_t   m_lives;
-uint8_t   m_level;
-float     m_player;
-float     m_speed;
-uint8_t   m_battype;
+static uint32_t  m_hiscore;
+static uint32_t  m_score;
+static uint8_t   m_lives;
+static uint8_t   m_level;
+static float     m_player;
+static float     m_speed;
+static uint8_t   m_battype;
+static int8_t    m_balls[MAX_BALLS];
+
 
 /* Functions. */
 
@@ -62,6 +67,10 @@ void game_init( void )
   /* Fetch the current high score from long term storage. */
   /* __RETURN__ */
   m_hiscore = 9999;
+  
+  /* Spawn a ball on the player's bat. */
+  memset( m_balls, -1, MAX_BALLS );
+  m_balls[0] = ball_create( m_player );
 }
 
 /*
@@ -75,6 +84,8 @@ void game_init( void )
 
 gamestate_t game_update( uint32_t p_time )
 {
+  uint8_t l_index;
+  
   /* See if the player is moving left. */
   if ( ( blit::pressed( blit::button::DPAD_LEFT ) ) || ( blit::joystick.x < -0.1f ) )
   {
@@ -92,6 +103,27 @@ gamestate_t game_update( uint32_t p_time )
     if ( ( m_player += m_speed ) > ( fb.bounds.w - ( m_bats[m_battype].width / 2 ) ) )
     {
       m_player -= m_speed;
+    }
+  }
+  
+  /* If they press the Y button, launch any balls we're currently holding. */
+  if ( blit::pressed( blit::button::Y ) )
+  {
+    for ( l_index = 0; l_index < MAX_BALLS; l_index++ )
+    {
+      if ( m_balls[l_index] >= 0 )
+      {
+        ball_launch( m_balls[l_index] );
+      }
+    }
+  }
+  
+  /* Update the location of the ball(s). */
+  for ( l_index = 0; l_index < MAX_BALLS; l_index++ )
+  {
+    if ( m_balls[l_index] >= 0 )
+    {
+      ball_update( m_balls[l_index], m_player );
     }
   }
   
@@ -116,9 +148,9 @@ void game_render( void )
   
   /* Render the top status line. */
   fb.pen( rgba( 255, 255, 255, 255 ) );
-  sprintf( l_buffer, "HI: %05u", m_hiscore );
+  sprintf( l_buffer, "HI: %05lu", m_hiscore );
   fb.text( l_buffer, &minimal_font[0][0], point( 16, 1 ), true );
-  sprintf( l_buffer, "SCORE: %05u", m_score );
+  sprintf( l_buffer, "SCORE: %05lu", m_score );
   fb.text( l_buffer, &minimal_font[0][0], point( 240, 1 ), true );
   
   /* Lives are tricky, we can run out of space... */
@@ -155,7 +187,15 @@ void game_render( void )
   /* Add in the current bat. */
   sprite_render( "bat_normal", m_player, fb.bounds.h - 8, ALIGN_TOPCENTRE );
   
-  /* And the ball, obviously. */
+  /* And the ball(s), obviously. */
+  for ( l_index = 0; l_index < MAX_BALLS; l_index++ )
+  {
+    /* Only deal with balls we know about. */
+    if ( m_balls[l_index] >= 0 )
+    {
+      ball_render( m_balls[l_index] );
+    }
+  }
   
   /* Any falling debris, specials or effects. */
 }

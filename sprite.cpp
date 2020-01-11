@@ -101,6 +101,28 @@ void sprite_render( const char *p_sprite, int16_t p_column, int16_t p_row, sprit
     case ALIGN_TOPRIGHT:
       p_column -= l_sprite->width;
       break;
+    case ALIGN_MIDLEFT:
+      p_row -= l_sprite->height / 2;
+      break;
+    case ALIGN_MIDCENTRE:
+      p_row -= l_sprite->height / 2;
+      p_column -= l_sprite->width / 2;
+      break;
+    case ALIGN_MIDRIGHT:
+      p_row -= l_sprite->height / 2;
+      p_column -= l_sprite->width;
+      break;
+    case ALIGN_BOTLEFT:
+      p_row -= l_sprite->height;
+      break;
+    case ALIGN_BOTCENTRE:
+      p_row -= l_sprite->height;
+      p_column -= l_sprite->width / 2;
+      break;
+    case ALIGN_BOTRIGHT:
+      p_row -= l_sprite->height;
+      p_column -= l_sprite->width;
+      break;
   }
   if ( p_row < -1 ) p_row = 0;
   if ( p_row > fb.bounds.h ) p_row = fb.bounds.h;
