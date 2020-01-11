@@ -23,7 +23,19 @@
 
 /* Module variables. */
 
+const struct { const char *name; uint8_t width; } m_bats[] =
+{
+  { "bat_normal", 16 },
+  { NULL, 0 }
+};
 
+uint32_t  m_hiscore;
+uint32_t  m_score;
+uint8_t   m_lives;
+uint8_t   m_level;
+float     m_player;
+float     m_speed;
+uint8_t   m_battype;
 
 /* Functions. */
 
@@ -36,6 +48,20 @@ using namespace blit;
 
 void game_init( void )
 {
+  /* Set the player stats to an opening value. */
+  m_score = 0;
+  m_lives = 3;
+  m_level = 1;
+  m_player = fb.bounds.w / 2;
+  m_speed = 0.9;
+  m_battype = 0;
+  
+  /* Initialise that level. */
+  level_init( m_level );
+  
+  /* Fetch the current high score from long term storage. */
+  /* __RETURN__ */
+  m_hiscore = 9999;
 }
 
 /*
@@ -49,6 +75,25 @@ void game_init( void )
 
 gamestate_t game_update( uint32_t p_time )
 {
+  /* See if the player is moving left. */
+  if ( ( blit::pressed( blit::button::DPAD_LEFT ) ) || ( blit::joystick.x < -0.1f ) )
+  {
+    /* Don't let them go outside of bounds. */
+    if ( ( m_player -= m_speed ) < ( m_bats[m_battype].width / 2 ) )
+    {
+      m_player += m_speed;
+    }
+  }
+  
+  /* Or right, come to that! */
+  if ( ( blit::pressed( blit::button::DPAD_RIGHT ) ) || ( blit::joystick.x > 0.1f ) )
+  {
+    /* Don't let them go outside of bounds. */
+    if ( ( m_player += m_speed ) > ( fb.bounds.w - ( m_bats[m_battype].width / 2 ) ) )
+    {
+      m_player -= m_speed;
+    }
+  }
   
   /* Default to the status quo, then. */
   return STATE_GAME;
@@ -61,13 +106,58 @@ gamestate_t game_update( uint32_t p_time )
 
 void game_render( void )
 {
+  uint8_t   l_index, l_brick;
+  char      l_buffer[32];
+  uint8_t  *l_line;
+  
   /* Clear the screen back to something sensible. */
   fb.pen( rgba( 0, 0, 0, 255 ) );
   fb.clear();
   
-  
+  /* Render the top status line. */
   fb.pen( rgba( 255, 255, 255, 255 ) );
-  fb.text( "GGGAAAMMMEEE   OOOVVVEEERRR!!!!!!", &outline_font[0][0], point( 94, 180 ), true );
+  sprintf( l_buffer, "HI: %05u", m_hiscore );
+  fb.text( l_buffer, &minimal_font[0][0], point( 16, 1 ), true );
+  sprintf( l_buffer, "SCORE: %05u", m_score );
+  fb.text( l_buffer, &minimal_font[0][0], point( 240, 1 ), true );
+  
+  /* Lives are tricky, we can run out of space... */
+  if ( m_lives < 5 )
+  {
+    for ( l_index = 0; l_index < m_lives; l_index++ )
+    {
+      sprite_render( "bat_normal", 150 - ( ( m_lives - 1 ) * 10 ) + ( l_index * 20 ), 3 );
+    }
+  }
+  
+  /* Underline that, to form a hard border to bounce off at the top. */
+  fb.pen( rgba( 255, 255, 255, 255 ) );
+  fb.line( point( 0, 9 ), point( fb.bounds.w, 9 ) );
+  
+  /* Now we draw up the surviving bricks in the level. */
+  for ( l_index = 0; l_index < 20; l_index++ )
+  {
+    /* Fetch the current state, a line at a time. */
+    l_line = level_get_line( l_index );
+    
+    /* And work through a brick at a time. */
+    for ( l_brick = 0; l_brick < 20; l_brick++ )
+    {
+      /* Only try and draw bricks which are actually there... */
+      if ( l_line[ l_brick ] > 0 )
+      {
+        sprite_render( level_get_bricktype( l_line[ l_brick ] ),
+                       l_brick * 16, 10 + ( l_index * 8 ) );
+      }
+    }
+  }
+  
+  /* Add in the current bat. */
+  sprite_render( "bat_normal", m_player, fb.bounds.h - 8, ALIGN_TOPCENTRE );
+  
+  /* And the ball, obviously. */
+  
+  /* Any falling debris, specials or effects. */
 }
 
 

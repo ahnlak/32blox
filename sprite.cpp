@@ -47,25 +47,19 @@ using namespace blit;
  * const char * - the name of the sprite
  * uint16_t     - row to start drawing from (x), or -1 to centre.
  * uint16_t     - column to start drawing from (y), or -1 to centre.
+ * spritealign_t- defines the origin point of the render.
  */
 
-void sprite_render( const char *p_sprite, int16_t p_column, int16_t p_row )
+void sprite_render( const char *p_sprite, int16_t p_column, int16_t p_row, spritealign_t p_align )
 {
-  int           l_index;
+  uint8_t       l_index;
   rgba          l_palette[256];
   packed_image *l_sprite;
   uint8_t      *l_spritedata;
   uint8_t       l_bitdepth, l_bit, l_pixel;
   uint16_t      l_row, l_column;
   
-  /* Step one, sanity check that the co-ords are within the framebuffer. */
-  if ( ( p_row < -1 ) || ( p_column < -1 ) ||
-       ( p_row > fb.bounds.h ) || ( p_column > fb.bounds.w ) )
-  {
-    return;
-  }
-
-  /* Step two, find the sprite in the lookup table. */
+  /* Step one, find the sprite in the lookup table. */
   for( l_index = 0; m_sprites[l_index].name != NULL; l_index++ )
   {
     if ( strcmp( p_sprite, m_sprites[l_index].name ) == 0 )
@@ -80,12 +74,12 @@ void sprite_render( const char *p_sprite, int16_t p_column, int16_t p_row )
     return;
   }
 
-  /* Step three, extract some basic metrics about the chosen sprite. */
+  /* Step two, extract some basic metrics about the chosen sprite. */
   l_sprite = (packed_image *)m_sprites[l_index].data;
   l_spritedata = m_sprites[l_index].data + sizeof(packed_image);
   l_bitdepth = ceil( log(l_sprite->palette_entry_count) / log(2) );
   
-  /* Step 3.5, if we're centering we finally have the data to do so! */
+  /* Step three, if we're centering we finally have the data to do so! */
   if ( p_row == -1 )
   {
     p_row = ( fb.bounds.h - l_sprite->height ) / 2;
@@ -95,10 +89,29 @@ void sprite_render( const char *p_sprite, int16_t p_column, int16_t p_row )
     p_column = ( fb.bounds.w - l_sprite->width ) / 2;
   }
   
+  /* Step 3.5, apply any alignment requirements, as best we can. */
+  switch( p_align )
+  {
+    case ALIGN_TOPLEFT:
+      /* No adjustment required. */
+      break;
+    case ALIGN_TOPCENTRE:
+      p_column -= l_sprite->width / 2;
+      break;
+    case ALIGN_TOPRIGHT:
+      p_column -= l_sprite->width;
+      break;
+  }
+  if ( p_row < -1 ) p_row = 0;
+  if ( p_row > fb.bounds.h ) p_row = fb.bounds.h;
+  if ( p_column < -1 ) p_column = 0;
+  if ( p_column > fb.bounds.w ) p_column = fb.bounds.w;
+  
   /* Step four, extract the palette into a more useful form. */
   for( l_index = 0; l_index < l_sprite->palette_entry_count; l_index++ )
   {
-    l_palette[l_index] = rgba( l_spritedata[ 0 ], l_spritedata[ 1 ], l_spritedata[ 2 ] );
+    l_palette[l_index] = rgba( l_spritedata[ 0 ], l_spritedata[ 1 ], 
+                               l_spritedata[ 2 ], l_spritedata[ 3 ] );
     l_spritedata += 4;
   }
   

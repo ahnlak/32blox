@@ -29,6 +29,18 @@ typedef enum {
   STATE_HISCORE
 } gamestate_t;
 
+typedef enum {
+  ALIGN_TOPLEFT,
+  ALIGN_TOPCENTRE,
+  ALIGN_TOPRIGHT,
+  ALIGN_MIDLEFT,
+  ALIGN_MIDCENTRE,
+  ALIGN_MIDRIGHT,
+  ALIGN_BOTLEFT,
+  ALIGN_BOTCENTRE,
+  ALIGN_BOTRIGHT
+} spritealign_t;
+
 /* Structures. */
 
 /* Function prototypes. */
@@ -41,10 +53,15 @@ void        game_init( void );
 void        game_render( void );
 gamestate_t game_update( uint32_t );
 
+void        level_init( uint8_t );
+uint8_t    *level_get_line( uint8_t );
+const char *level_get_bricktype( uint8_t );
+uint16_t    level_get_bricks( void );
+
 void        splash_render( void );
 gamestate_t splash_update( uint32_t );
 
-void        sprite_render( const char *, int16_t, int16_t );
+void        sprite_render( const char *, int16_t, int16_t, spritealign_t = ALIGN_TOPLEFT );
 
 
 #endif /* _32BLOCK_HPP_ */
