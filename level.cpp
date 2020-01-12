@@ -27,7 +27,7 @@
 
 /* Module variables. */
 
-static uint8_t m_current_level[10][10];
+static uint8_t m_current_level[BOARD_HEIGHT][BOARD_WIDTH];
 
 
 /* Raw level data. */
@@ -49,7 +49,8 @@ using namespace blit;
 void level_init( uint8_t p_level )
 {
   /* Quite easy really, we just copy the whole block of level data. */
-  memcpy( m_current_level, &m_levels[ p_level ], sizeof( uint8_t ) * 100 );
+  memcpy( m_current_level, &m_levels[ p_level ], 
+          sizeof( uint8_t ) * ( BOARD_HEIGHT * BOARD_WIDTH ) );
 }
 
 
@@ -67,14 +68,62 @@ uint8_t *level_get_line( uint8_t p_line )
   return m_current_level[ p_line ];
 }
 
+
+/*
+ * level_hit_brick - hits the specified brick with a ball. Depending on the
+ *                   type of brick, we might modify or remove it.
+ * 
+ * uint8_t - the row the brick is on
+ * uint8_t - the column the brick is in
+ */
+
+void level_hit_brick( uint8_t p_row, uint8_t p_column )
+{
+  /* Sanity check the location. */
+  if ( ( p_row >= BOARD_HEIGHT ) || ( p_column >= BOARD_WIDTH ) )
+  {
+    return;
+  }
+  
+  /* And only act if a brick is there. */
+  if ( m_current_level[p_row][p_column] == 0 )
+  {
+    return;
+  }
+  
+  /* For now, we'll just decrement the brick type. */
+  m_current_level[p_row][p_column]--;
+}
+
 const char *level_get_bricktype( uint8_t p_bricktype )
 {
   return "brick_yellow";
 }
 
+
+/*
+ * level_get_bricks - returns the number of bricks remaining in the level
+ * 
+ * Returns a brick count.
+ */
+
 uint16_t level_get_bricks( void )
 {
-  return 0;
+  uint8_t  l_row, l_column;
+  uint16_t l_bricks = 0;
+  
+  /* Simply count the non-zero entries in the level. */
+  for ( l_row = 0; l_row < BOARD_HEIGHT; l_row++ )
+  {
+    for ( l_column = 0; l_column < BOARD_WIDTH; l_column++ )
+    {
+      if ( m_current_level[l_row][l_column] > 0 )
+      {
+        l_bricks++;
+      }
+    }
+  }
+  return l_bricks;
 }
 
 /* End of level.cpp */

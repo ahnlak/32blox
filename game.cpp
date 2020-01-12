@@ -114,7 +114,7 @@ gamestate_t game_update( uint32_t p_time )
   }
   
   /* If they press the Y button, launch any balls we're currently holding. */
-  if ( blit::pressed( blit::button::Y ) )
+  if ( blit::pressed( blit::button::B ) )
   {
     for ( l_index = 0; l_index < MAX_BALLS; l_index++ )
     {
@@ -244,12 +244,17 @@ void game_render( void )
       if ( ball_stuck( m_balls[l_index] ) )
       {
         fb.pen( m_text_colour );
-        fb.text( "PRESS 'Y' TO LAUNCH", &outline_font[0][0], point( 32, 100 ), true );
+        fb.text( "PRESS 'B' TO LAUNCH", &outline_font[0][0], point( 32, 100 ), true );
       }
     }
   }
   
   /* Any falling debris, specials or effects. */
+  if ( level_get_bricks() == 0 )
+  {
+    fb.pen( m_text_colour );
+    fb.text( "YOU ARE A WINNER!!!", &outline_font[0][0], point( 32, 100 ), true );
+  }
 }
 
 

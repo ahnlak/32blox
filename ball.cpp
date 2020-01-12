@@ -100,6 +100,8 @@ uint8_t ball_spawn( uint8_t )
 int8_t ball_update( uint8_t p_ballid, uint16_t p_batloc, uint8_t p_batwidth )
 {
   uint8_t  l_score = 0;
+  uint8_t  l_row, l_column;
+  uint8_t *l_bricks;
   uint16_t l_newx, l_newy;
   size     l_ballsize = sprite_size( "ball" );
   
@@ -145,15 +147,92 @@ int8_t ball_update( uint8_t p_ballid, uint16_t p_batloc, uint8_t p_batwidth )
        ( m_balls[p_ballid].x < ( fb.bounds.h - 8 - ( ( l_ballsize.h+1 ) / 2 ) ) ) )
   {
     /* So, we've crossed the baseline. Check the bat bounds. */
-    if ( ( l_newy >= ( p_batloc - ( p_batwidth / 2 ) ) ) &&
-         ( l_newy <= ( p_batloc + ( p_batwidth / 2 ) ) ) )
+    if ( ( ( l_newy + ( l_ballsize.w / 2 ) ) >= ( p_batloc - ( p_batwidth / 2 ) ) ) &&
+         ( ( l_newy - ( l_ballsize.w / 2 ) ) <= ( p_batloc + ( p_batwidth / 2 ) ) ) )
     {
+      /* Bounce vertically, and score. */
       m_balls[p_ballid].dx *= -1.0f;
       l_score++;
+      
+      /* But if it was an edge shot, impart some horizontal speed too. */
+      if ( ( l_newy + ( l_ballsize.w / 2 ) ) < ( p_batloc - ( p_batwidth / 2 ) + 3 ) )
+      {
+        m_balls[p_ballid].dy -= 0.5f;
+      }
+      if ( ( l_newy - ( l_ballsize.w / 2 ) ) > ( p_batloc + ( p_batwidth / 2 ) - 3 ) )
+      {
+        m_balls[p_ballid].dy += 0.5f;
+      }
     }
   }
   
-  /* Lastly, we need to consider bricks. What row are we on? */
+  /* Lastly, we need to consider bricks. Where are we? */
+  if ( m_balls[p_ballid].dx < 0 )
+  {
+    l_row = ( l_newx - 10 - ( l_ballsize.h / 2 ) ) / 8;
+  }
+  else
+  {
+    l_row = ( l_newx - 10 + ( l_ballsize.h / 2 ) ) / 8;
+  }
+  if ( m_balls[p_ballid].dy < 0 )
+  {
+    l_column = ( l_newy - ( l_ballsize.w / 2 ) ) / 16;
+  }
+  else
+  {
+    l_column = ( l_newy + ( l_ballsize.w / 2 ) ) / 16;
+  }
+  
+  /* Obviously we don't worry if we're below the bottom row. */
+  if ( l_row < 10 )
+  {
+    /* Fetch the row details. */
+    l_bricks = level_get_line( l_row );
+    
+    /* And look at the brick we're in. If we're are, then hit and bounce. */
+    if ( l_bricks[l_column] > 0 )
+    {
+      /* Hit the brick, give a score. */
+      level_hit_brick( l_row, l_column );
+      l_score += 10;
+      
+      /* And work out which direction to bounce in. */
+      if ( m_balls[p_ballid].dx < 0 )
+      {
+        if ( (uint8_t)( ( m_balls[p_ballid].x - 10 - ( l_ballsize.h / 2 ) ) / 8 ) != l_row )
+        {
+          /* Then it's a vertical bounce. */
+          m_balls[p_ballid].dx *= -1.0f;
+        }
+      }
+      else
+      {
+        if ( (uint8_t)( ( m_balls[p_ballid].x - 10 + ( l_ballsize.h / 2 ) ) / 8 ) != l_row )
+        {
+          /* Then it's a vertical bounce. */
+          m_balls[p_ballid].dx *= -1.0f;
+        }
+      }
+      
+      if ( m_balls[p_ballid].dy < 0 )
+      {
+        if ( (uint8_t)( ( m_balls[p_ballid].y - ( l_ballsize.w / 2 ) ) / 16 ) != l_column )
+        {
+          /* Then it's a horizontal bounce. */
+          m_balls[p_ballid].dy *= -1.0f;
+        }
+      }
+      else
+      {
+        if ( (uint8_t)( ( m_balls[p_ballid].y + ( l_ballsize.w / 2 ) ) / 16 ) != l_column )
+        {
+          /* Then it's a horizontal bounce. */
+          m_balls[p_ballid].dy *= -1.0f;
+        }
+      }
+    }
+  }  
   
   /* Ok, apply the new deltas then and we're done. */
   m_balls[p_ballid].x += m_balls[p_ballid].dx;
@@ -199,8 +278,8 @@ void ball_launch( uint8_t p_ballid )
   }
   
   /* So, all we really do is create a slightly random vector to release on. */
-  m_balls[p_ballid].dx = -0.75;
-  m_balls[p_ballid].dy = -0.5;
+  m_balls[p_ballid].dx = -0.75f;
+  m_balls[p_ballid].dy = -0.5f + ( ( blit::random() % 100 ) / 100.0f );
   m_balls[p_ballid].stuck = false;
 }
 

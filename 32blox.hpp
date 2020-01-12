@@ -20,8 +20,9 @@
 
 /* Constants. */
 
-#define MAX_BALLS 5
-
+#define MAX_BALLS     5
+#define BOARD_WIDTH   10
+#define BOARD_HEIGHT  10
 
 /* Enums. */
 
@@ -65,6 +66,7 @@ gamestate_t game_update( uint32_t );
 
 void        level_init( uint8_t );
 uint8_t    *level_get_line( uint8_t );
+void        level_hit_brick( uint8_t, uint8_t );
 const char *level_get_bricktype( uint8_t );
 uint16_t    level_get_bricks( void );
 
