@@ -75,7 +75,7 @@ uint8_t *level_get_line( uint8_t p_line )
  * 
  * uint8_t - the row the brick is on
  * uint8_t - the column the brick is in
- */
+*/
 
 void level_hit_brick( uint8_t p_row, uint8_t p_column )
 {
@@ -97,7 +97,18 @@ void level_hit_brick( uint8_t p_row, uint8_t p_column )
 
 const char *level_get_bricktype( uint8_t p_bricktype )
 {
-  return "brick_yellow";
+  switch( p_bricktype )
+  {
+    case 3:
+      return "brick_yellow";
+    case 2:
+      return "brick_orange";
+    case 1:
+      return "brick_red";
+  }
+  
+  /* Default to a red brick, should never be reached though... */
+  return "brick_red";
 }
 
 

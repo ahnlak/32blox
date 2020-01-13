@@ -45,7 +45,20 @@ typedef enum {
   ALIGN_BOTRIGHT
 } spritealign_t;
 
+typedef enum {
+  BAT_NORMAL,
+  BAT_MAX
+} battype_t;
+
 /* Structures. */
+
+typedef struct {
+  battype_t   type;
+  float       position;
+  uint16_t    baseline;
+  uint8_t     width;
+} bat_t;
+
 
 /* Function prototypes. */
 
@@ -53,9 +66,9 @@ void        init( void );
 void        update( uint32_t );
 void        render( uint32_t );
 
-uint8_t     ball_create( uint16_t );
+uint8_t     ball_create( bat_t );
 uint8_t     ball_spawn( uint8_t );
-int8_t      ball_update( uint8_t, uint16_t,uint8_t );
+int8_t      ball_update( uint8_t, bat_t );
 void        ball_render( uint8_t );
 void        ball_launch( uint8_t );
 bool        ball_stuck( uint8_t );
@@ -75,6 +88,7 @@ gamestate_t splash_update( uint32_t );
 
 void        sprite_render( const char *, int16_t, int16_t, spritealign_t = ALIGN_TOPLEFT );
 size        sprite_size( const char * );
+bool        sprite_collide( const char *, int16_t, int16_t, spritealign_t, const char *, int16_t, int16_t, spritealign_t );
 
 
 #endif /* _32BLOCK_HPP_ */

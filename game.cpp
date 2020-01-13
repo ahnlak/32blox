@@ -26,22 +26,17 @@
 
 /* Module variables. */
 
-static const struct { const char *name; uint8_t width; } m_bats[] =
-{
-  { "bat_normal", 16 },
-  { NULL, 0 }
-};
+static struct { const char *name; } m_bats[BAT_MAX];
 
 static rgba      m_text_colour;
 static uint32_t  m_hiscore;
 static uint32_t  m_score;
 static uint8_t   m_lives;
 static uint8_t   m_level;
-static float     m_player;
 static float     m_speed;
-static uint8_t   m_battype;
 static bool      m_flash;
 static int8_t    m_balls[MAX_BALLS];
+static bat_t     m_player;
 
 
 /* Functions. */
@@ -55,14 +50,20 @@ using namespace blit;
 
 void game_init( void )
 {
+  /* Initialise the bat details. */
+  m_bats[BAT_NORMAL].name = "bat_normal";
+  
   /* Set the player stats to an opening value. */
   m_score = 0;
   m_lives = 3;
   m_level = 1;
-  m_player = fb.bounds.w / 2;
-  m_speed = 0.9;
-  m_battype = 0;
+  m_speed = 1.1f;
   m_flash = false;
+  
+  m_player.type = BAT_NORMAL;
+  m_player.position = fb.bounds.w / 2;
+  m_player.baseline = fb.bounds.h - 8;
+  m_player.width = sprite_size( m_bats[BAT_NORMAL].name ).w;
   
   /* Initialise that level. */
   level_init( m_level );
@@ -97,9 +98,9 @@ gamestate_t game_update( uint32_t p_time )
   if ( ( blit::pressed( blit::button::DPAD_LEFT ) ) || ( blit::joystick.x < -0.1f ) )
   {
     /* Don't let them go outside of bounds. */
-    if ( ( m_player -= m_speed ) < ( m_bats[m_battype].width / 2 ) )
+    if ( ( m_player.position -= m_speed ) < ( m_player.width / 2 ) )
     {
-      m_player += m_speed;
+      m_player.position += m_speed;
     }
   }
   
@@ -107,9 +108,9 @@ gamestate_t game_update( uint32_t p_time )
   if ( ( blit::pressed( blit::button::DPAD_RIGHT ) ) || ( blit::joystick.x > 0.1f ) )
   {
     /* Don't let them go outside of bounds. */
-    if ( ( m_player += m_speed ) > ( fb.bounds.w - ( m_bats[m_battype].width / 2 ) ) )
+    if ( ( m_player.position += m_speed ) > ( fb.bounds.w - ( m_player.width / 2 ) ) )
     {
-      m_player -= m_speed;
+      m_player.position -= m_speed;
     }
   }
   
@@ -131,7 +132,7 @@ gamestate_t game_update( uint32_t p_time )
     if ( m_balls[l_index] >= 0 )
     {
       /* The ball update will tell us if there's a score to be earned. */
-      l_score = ball_update( m_balls[l_index], m_player, m_bats[m_battype].width );
+      l_score = ball_update( m_balls[l_index], m_player );
       if ( l_score > 0 )
       {
         m_score += l_score;
@@ -232,7 +233,7 @@ void game_render( void )
   }
   
   /* Add in the current bat. */
-  sprite_render( "bat_normal", m_player, fb.bounds.h - 8, ALIGN_TOPCENTRE );
+  sprite_render( m_bats[m_player.type].name, m_player.position, m_player.baseline, ALIGN_TOPCENTRE );
   
   /* And the ball(s), obviously. */
   for ( l_index = 0; l_index < MAX_BALLS; l_index++ )
@@ -244,6 +245,8 @@ void game_render( void )
       if ( ball_stuck( m_balls[l_index] ) )
       {
         fb.pen( m_text_colour );
+        sprintf( l_buffer, "LEVEL %02d", m_level );
+        fb.text( l_buffer, &outline_font[0][0], point( 59, 92 ), true );
         fb.text( "PRESS 'B' TO LAUNCH", &outline_font[0][0], point( 32, 100 ), true );
       }
     }

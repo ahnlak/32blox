@@ -26,6 +26,7 @@ do
   asset_name=`basename -s .png $sprite | sed "s/-/_/g"`
   
   # Generate the packed data
+  echo -n 'const static ' >> assets.h
   $SPRITEBUILDER packed --arrayname m_sprite_$asset_name $sprite >> assets.h
   
   # And push this asset into the generated set
@@ -33,7 +34,7 @@ do
 done
 
 # And lastly, put out the sprite lookup table
-echo "static const struct { const char *name; uint8_t *data; } m_sprites[] = {" >> assets.h
+echo "static const struct { const char *name; const uint8_t *data; } m_sprites[] = {" >> assets.h
 for asset in ${asset_list[@]}
 do
   echo "{ \"$asset\", m_sprite_$asset }," >> assets.h

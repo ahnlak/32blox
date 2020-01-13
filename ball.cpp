@@ -37,6 +37,33 @@ static struct {
 } m_balls[5];
 
 
+/* Module functions. */
+
+static bool check_brick_hit( uint16_t p_row, uint16_t p_column, uint16_t p_newx, uint16_t p_newy )
+{
+  uint8_t *l_bricks;
+  
+  /* Sanity check the arguments. */
+  if ( ( p_row >= 10 ) || ( p_column >= 10 ) )
+  {
+    return false;
+  }
+  
+  /* Fetch the bricks. */
+  l_bricks = level_get_line( p_row );
+    
+  /* No hit where there is no brick. */
+  if ( l_bricks[p_column] == 0 )
+  {
+    return false;
+  }
+  
+  /* Sprite collision check then. */
+  return sprite_collide( level_get_bricktype( l_bricks[p_column] ),
+                         p_column * 16, ( p_row * 8 ) + 10, ALIGN_TOPLEFT,
+                         "ball", p_newy, p_newx, ALIGN_MIDCENTRE );
+}
+
 /* Functions. */
 
 using namespace blit;
@@ -45,12 +72,12 @@ using namespace blit;
 /*
  * ball_create - generate a new player ball, on the player bat
  *
- * uint16_t - the location of the player bat
+ * bat_t - details of the player's bat
  *
  * Returns the ball ID of the new ball.
  */
 
-uint8_t ball_create( uint16_t p_batloc )
+uint8_t ball_create( bat_t p_bat )
 {
   uint8_t l_index;
   size    l_ballsize = sprite_size( "ball" );
@@ -71,8 +98,8 @@ uint8_t ball_create( uint16_t p_batloc )
   }
   
   /* Good, so initiate the ball as stuck to the bat. */
-  m_balls[l_index].x = fb.bounds.h - 8 - ( ( l_ballsize.h+1 ) / 2 );
-  m_balls[l_index].y = p_batloc;
+  m_balls[l_index].x = p_bat.baseline - ( ( l_ballsize.h+1 ) / 2 );
+  m_balls[l_index].y = p_bat.position;
   m_balls[l_index].dx = m_balls[l_index].dy = 0;
   m_balls[l_index].stuck = m_balls[l_index].active = true;
   
@@ -92,18 +119,20 @@ uint8_t ball_spawn( uint8_t )
  *               potential bounces.
  * 
  * uint8_t - the ball ID being updated
- * uint16_t - the location of the player bat, potentially relavent
+ * bat_t   - the players bat details, potentially important
  * 
  * Returns any score that has been earned by the update, or -1 if the ball died.
  */
 
-int8_t ball_update( uint8_t p_ballid, uint16_t p_batloc, uint8_t p_batwidth )
+int8_t ball_update( uint8_t p_ballid, bat_t p_bat )
 {
   uint8_t  l_score = 0;
   uint8_t  l_row, l_column;
   uint8_t *l_bricks;
   uint16_t l_newx, l_newy;
+  float    l_edge, l_speed;
   size     l_ballsize = sprite_size( "ball" );
+  bool     l_bounced;
   
   /* Only active, valid balls need apply. */
   if ( ( p_ballid < 0 ) || ( p_ballid >= MAX_BALLS ) || ( !m_balls[p_ballid].active ) )
@@ -114,7 +143,7 @@ int8_t ball_update( uint8_t p_ballid, uint16_t p_batloc, uint8_t p_batwidth )
   /* If we're stuck to the bat, reflect that. */
   if ( m_balls[p_ballid].stuck )
   {
-    m_balls[p_ballid].y = p_batloc;
+    m_balls[p_ballid].y = p_bat.position;
     return 0;
   }
 
@@ -141,98 +170,172 @@ int8_t ball_update( uint8_t p_ballid, uint16_t p_batloc, uint8_t p_batwidth )
     return -1;
   }
   
-  /* Check to see if we hit the bat. */
-  if ( ( m_balls[p_ballid].dx > 0.0f ) && 
-       ( l_newx >= ( fb.bounds.h - 11 ) ) && 
-       ( m_balls[p_ballid].x < ( fb.bounds.h - 8 - ( ( l_ballsize.h+1 ) / 2 ) ) ) )
+  /* See if we've dropped below the bat baseline. */
+  if ( ( ( l_newx + ( l_ballsize.h / 2 ) ) >= p_bat.baseline ) && 
+       ( ( m_balls[p_ballid].x + ( l_ballsize.h / 2 ) ) < p_bat.baseline ) )
   {
-    /* So, we've crossed the baseline. Check the bat bounds. */
-    if ( ( ( l_newy + ( l_ballsize.w / 2 ) ) >= ( p_batloc - ( p_batwidth / 2 ) ) ) &&
-         ( ( l_newy - ( l_ballsize.w / 2 ) ) <= ( p_batloc + ( p_batwidth / 2 ) ) ) )
+    /* Check to see if we hit the bat. */
+    if ( sprite_collide( "bat_normal", p_bat.position, p_bat.baseline, ALIGN_TOPCENTRE,
+                        "ball", l_newy, l_newx, ALIGN_MIDCENTRE ) )
     {
       /* Bounce vertically, and score. */
       m_balls[p_ballid].dx *= -1.0f;
       l_score++;
       
-      /* But if it was an edge shot, impart some horizontal speed too. */
-      if ( ( l_newy + ( l_ballsize.w / 2 ) ) < ( p_batloc - ( p_batwidth / 2 ) + 3 ) )
+      /* Take into account edge shots, somehow... */
+      l_edge = ( l_newy + ( l_ballsize.w / 2 ) ) - ( p_bat.position - ( p_bat.width / 2 ) );
+      if ( l_edge < 5.0f )
       {
-        m_balls[p_ballid].dy -= 0.5f;
+        m_balls[p_ballid].dy -= ( ( 5.0f - l_edge ) / 10.0f );
       }
-      if ( ( l_newy - ( l_ballsize.w / 2 ) ) > ( p_batloc + ( p_batwidth / 2 ) - 3 ) )
+
+      l_edge = ( p_bat.position + ( p_bat.width / 2 ) ) - ( l_newy - ( l_ballsize.w / 2 ) );
+      if ( l_edge < 5.0f )
       {
-        m_balls[p_ballid].dy += 0.5f;
+        m_balls[p_ballid].dy += ( ( 5.0f - l_edge ) / 10.0f );
       }
     }
   }
   
-  /* Lastly, we need to consider bricks. Where are we? */
-  if ( m_balls[p_ballid].dx < 0 )
+  /* Lastly, bricks. Nothing to do if we're below the play space. */
+  if ( ( ( l_newx - 10 ) / 8 ) < 10 )
   {
-    l_row = ( l_newx - 10 - ( l_ballsize.h / 2 ) ) / 8;
-  }
-  else
-  {
-    l_row = ( l_newx - 10 + ( l_ballsize.h / 2 ) ) / 8;
-  }
-  if ( m_balls[p_ballid].dy < 0 )
-  {
-    l_column = ( l_newy - ( l_ballsize.w / 2 ) ) / 16;
-  }
-  else
-  {
-    l_column = ( l_newy + ( l_ballsize.w / 2 ) ) / 16;
-  }
-  
-  /* Obviously we don't worry if we're below the bottom row. */
-  if ( l_row < 10 )
-  {
-    /* Fetch the row details. */
-    l_bricks = level_get_line( l_row );
+    /* We need to know roughly where we are now. */
+    l_row = ( m_balls[p_ballid].x - 10 ) / 8;
+    l_column = m_balls[p_ballid].y / 16;
     
-    /* And look at the brick we're in. If we're are, then hit and bounce. */
-    if ( l_bricks[l_column] > 0 )
+    /* First, consider the row above us if we're moving up and not at the top. */
+    if ( ( m_balls[p_ballid].dx < 0 ) && ( l_row > 0 ) )
     {
-      /* Hit the brick, give a score. */
-      level_hit_brick( l_row, l_column );
-      l_score += 10;
-      
-      /* And work out which direction to bounce in. */
-      if ( m_balls[p_ballid].dx < 0 )
+      /* Check the three bricks above us. */
+      l_bounced = false;
+      if ( check_brick_hit( l_row - 1, l_column - 1, l_newx, l_newy ) )
       {
-        if ( (uint8_t)( ( m_balls[p_ballid].x - 10 - ( l_ballsize.h / 2 ) ) / 8 ) != l_row )
-        {
-          /* Then it's a vertical bounce. */
-          m_balls[p_ballid].dx *= -1.0f;
-        }
+        l_bounced = true;
+        level_hit_brick( l_row - 1, l_column - 1 );
       }
-      else
+      else if ( check_brick_hit( l_row - 1, l_column, l_newx, l_newy ) )
       {
-        if ( (uint8_t)( ( m_balls[p_ballid].x - 10 + ( l_ballsize.h / 2 ) ) / 8 ) != l_row )
-        {
-          /* Then it's a vertical bounce. */
-          m_balls[p_ballid].dx *= -1.0f;
-        }
+        l_bounced = true;
+        level_hit_brick( l_row - 1, l_column );
+      }
+      else if ( check_brick_hit( l_row - 1, l_column + 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row - 1, l_column + 1 );
       }
       
-      if ( m_balls[p_ballid].dy < 0 )
+      /* Lastly, bounce and score if we, well, bounced. */
+      if ( l_bounced )
       {
-        if ( (uint8_t)( ( m_balls[p_ballid].y - ( l_ballsize.w / 2 ) ) / 16 ) != l_column )
-        {
-          /* Then it's a horizontal bounce. */
-          m_balls[p_ballid].dy *= -1.0f;
-        }
-      }
-      else
-      {
-        if ( (uint8_t)( ( m_balls[p_ballid].y + ( l_ballsize.w / 2 ) ) / 16 ) != l_column )
-        {
-          /* Then it's a horizontal bounce. */
-          m_balls[p_ballid].dy *= -1.0f;
-        }
+        l_score += 10;
+        m_balls[p_ballid].dx *= -1.0f;
       }
     }
-  }  
+    
+    /* Then the row below us, if we're moving down (and not off the bottom) */
+    if ( ( m_balls[p_ballid].dx > 0 ) && ( l_row < 9 ) )
+    {
+      /* Check the three bricks below us. */
+      l_bounced = false;
+      if ( check_brick_hit( l_row + 1, l_column - 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row + 1, l_column - 1 );
+      }
+      else if ( check_brick_hit( l_row + 1, l_column, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row + 1, l_column );
+      }
+      else if ( check_brick_hit( l_row + 1, l_column + 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row + 1, l_column + 1 );
+      }
+      
+      /* Lastly, bounce and score if we, well, bounced. */
+      if ( l_bounced )
+      {
+        l_score += 10;
+        m_balls[p_ballid].dx *= -1.0f;
+      }
+    }
+    
+    /* Now leftward collisions. */
+    if ( ( m_balls[p_ballid].dy < 0 ) && ( l_column > 0 ) )
+    {
+      /* Check the three bricks left us. */
+      l_bounced = false;
+      if ( check_brick_hit( l_row - 1, l_column - 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row - 1, l_column - 1 );
+      }
+      else if ( check_brick_hit( l_row, l_column - 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row, l_column - 1 );
+      }
+      else if ( check_brick_hit( l_row + 1, l_column - 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row + 1, l_column - 1 );
+      }
+      
+      /* Lastly, bounce and score if we, well, bounced. */
+      if ( l_bounced )
+      {
+        l_score += 10;
+        m_balls[p_ballid].dy *= -1.0f;
+      }
+    }
+    
+    /* And finally, rightward collisions. */
+    if ( ( m_balls[p_ballid].dy > 0 ) && ( l_column < 15 ) )
+    {
+      /* Check the three bricks right us. */
+      l_bounced = false;
+      if ( check_brick_hit( l_row - 1, l_column + 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row - 1, l_column + 1 );
+      }
+      else if ( check_brick_hit( l_row, l_column + 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row, l_column + 1 );
+      }
+      else if ( check_brick_hit( l_row + 1, l_column + 1, l_newx, l_newy ) )
+      {
+        l_bounced = true;
+        level_hit_brick( l_row + 1, l_column + 1 );
+      }
+      
+      /* Lastly, bounce and score if we, well, bounced. */
+      if ( l_bounced )
+      {
+        l_score += 10;
+        m_balls[p_ballid].dy *= -1.0f;
+      }
+    }
+  }
+
+  /* Lastly, check that the deltas haven't got *too* out of hand. */
+  l_speed = ( ( m_balls[p_ballid].dx * m_balls[p_ballid].dx ) +
+              ( m_balls[p_ballid].dy * m_balls[p_ballid].dy ) );
+  if ( l_speed > 0.9f )
+  {
+    /* Just nudge everything down a little. */
+    m_balls[p_ballid].dx *= 0.95f;
+    m_balls[p_ballid].dy *= 0.95f;
+  }
+  if ( l_speed < 0.6f )
+  {
+    /* Just nudge everything up a little. */
+    m_balls[p_ballid].dx *= 1.05f;
+    m_balls[p_ballid].dy *= 1.05f;
+  }
   
   /* Ok, apply the new deltas then and we're done. */
   m_balls[p_ballid].x += m_balls[p_ballid].dx;
