@@ -45,7 +45,7 @@ gamestate_t splash_update( uint32_t p_time )
 {
   /* Update the flickering prompt text. */
   m_text_colour = rgba( p_time % 255, ( p_time % 512 ) / 2, 255 - (p_time % 255), 255 );
-  m_gradient_row = ( p_time / 5 ) % 240;
+  m_gradient_row = ( p_time / 10 ) % 120;
   
   /* Check to see if the player has pressed the start button. */
   if ( blit::pressed( blit::button::A ) )
@@ -69,7 +69,15 @@ void splash_render( void )
   /* Clear the screen to a nice shifting gradient. */
   for( l_row = 0; l_row < fb.bounds.h; l_row++ )
   {
-    fb.pen( rgba( 32 + ( l_row / 2 ), 32, 0, 255 ) );
+    //fb.pen( rgba( 32 + ( l_row / 2 ), 32, 0, 255 ) );
+    fb.pen( 
+      rgba( 
+        (int)( 64.0f + 48.0f * ( sin( M_PIf32 * 2 / fb.bounds.h * l_row  ) ) ), 
+        0, 
+        (int)( 64.0f + 48.0f * ( cos( M_PIf32 * 2 / fb.bounds.h * l_row ) ) ), 
+        255 
+      )
+    );
     fb.line( point( 0, ( l_row + m_gradient_row ) % fb.bounds.h ), 
              point( fb.bounds.w, ( l_row + m_gradient_row ) % fb.bounds.h ) );
   }

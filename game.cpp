@@ -37,6 +37,7 @@ static float     m_speed;
 static bool      m_flash;
 static int8_t    m_balls[MAX_BALLS];
 static bat_t     m_player;
+static uint32_t  m_timer;
 
 
 /* Functions. */
@@ -59,6 +60,7 @@ void game_init( void )
   m_level = 1;
   m_speed = 1.1f;
   m_flash = false;
+  m_timer = 0;
   
   m_player.type = BAT_NORMAL;
   m_player.position = fb.bounds.w / 2;
@@ -165,6 +167,27 @@ gamestate_t game_update( uint32_t p_time )
     m_balls[0] = ball_create( m_player );
   }
   
+  /* If we've run out of bricks then the level is cleared. */
+  if ( level_get_bricks() == 0 )
+  {
+    /* If the timer isn't running, then start it. */
+    if ( m_timer == 0 )
+    {
+      m_timer = p_time;
+      memset( m_balls, -1, MAX_BALLS );
+      m_balls[0] = ball_create( m_player );
+    }
+    else
+    {
+      /* If we've shown "you're a winner!" long enough, jump to the next level. */
+      if ( ( m_timer + 2500 ) < p_time )
+      {
+        m_timer = 0;
+        level_init( ++m_level );
+      }
+    }
+  }
+  
   /* Default to the status quo, then. */
   return STATE_GAME;
 }
@@ -242,7 +265,7 @@ void game_render( void )
     if ( m_balls[l_index] >= 0 )
     {
       ball_render( m_balls[l_index] );
-      if ( ball_stuck( m_balls[l_index] ) )
+      if ( ( ball_stuck( m_balls[l_index] ) ) && ( level_get_bricks() > 0 ) )
       {
         fb.pen( m_text_colour );
         sprintf( l_buffer, "LEVEL %02d", m_level );
@@ -256,7 +279,9 @@ void game_render( void )
   if ( level_get_bricks() == 0 )
   {
     fb.pen( m_text_colour );
-    fb.text( "YOU ARE A WINNER!!!", &outline_font[0][0], point( 32, 100 ), true );
+    sprintf( l_buffer, "LEVEL %02d CLEARED", m_level );
+    fb.text( l_buffer, &outline_font[0][0], point( 40, 46 ), true );
+    fb.text( "GET READY!", &outline_font[0][0], point( 59, 60 ), true );
   }
 }
 
