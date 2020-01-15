@@ -47,7 +47,9 @@ void init( void )
   
   /* Set the initial gamestate (which should be redundant, but...) */
   m_gamestate = STATE_SPLASH;
-
+  
+  /* Initialise the high score storage. */
+  hiscore_init();
 }
 
 
@@ -76,7 +78,15 @@ void update( uint32_t p_time )
       break;
       
     case STATE_DEATH:       /* The game is done. Save the score. */
-      m_gamestate = STATE_SPLASH;
+      m_gamestate = STATE_HISCORE;
+      break;
+      
+    case STATE_HISCORE:     /* Show the high scores. */
+      m_gamestate = hiscore_update( p_time );
+      if ( m_gamestate == STATE_GAME )
+      {
+        game_init();
+      }
       break;
 
     default:                /* Erk! This should Not Be Possible. */
@@ -104,6 +114,10 @@ void render( uint32_t p_time )
       
     case STATE_GAME:        /* The player is, well, playing! */
       game_render();
+      break;
+      
+    case STATE_HISCORE:     /* Show the high scores. */
+      hiscore_render();
       break;
 
     default:                /* Erk! This should Not Be Possible. */

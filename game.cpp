@@ -71,8 +71,7 @@ void game_init( void )
   level_init( m_level );
   
   /* Fetch the current high score from long term storage. */
-  /* __RETURN__ */
-  m_hiscore = 9999;
+  m_hiscore = hiscore_get_score( 0 );
   
   /* Spawn a ball on the player's bat. */
   memset( m_balls, -1, MAX_BALLS );
@@ -162,6 +161,8 @@ gamestate_t game_update( uint32_t p_time )
   {
     if ( --m_lives <=0 )
     {
+      /* __RETURN__ */
+      hiscore_save_score( m_score, "PJF" );
       return STATE_DEATH;
     }
     m_balls[0] = ball_create( m_player );
@@ -200,6 +201,7 @@ gamestate_t game_update( uint32_t p_time )
 void game_render( void )
 {
   uint8_t   l_index, l_brick;
+  float     l_red, l_green, l_blue;
   char      l_buffer[32];
   uint8_t  *l_line;
   
@@ -211,9 +213,23 @@ void game_render( void )
   }
   else
   {
+    /* Basically black. */
     fb.pen( rgba( 0, 0, 0, 255 ) );
+    fb.clear();
+    
+    /* But let's put a nice dark gradient in there, based on level. */
+    l_red = ( m_level * 5 ) % 64;
+    l_green = ( 64 - ( m_level * 4 ) ) % 64;
+    l_blue = 0;
+    for( l_index = 0; l_index < fb.bounds.h - 16; l_index++ )
+    {
+      fb.pen( rgba( l_red - ( l_red * l_index / ( fb.bounds.h - 16.0 ) ), 
+                    l_green - ( l_green * l_index / ( fb.bounds.h - 16.0 ) ), 
+                    l_blue - ( l_blue * l_index / ( fb.bounds.h - 16.0 ) ), 
+                    255 ) );
+      fb.line( point( 0, l_index ), point( fb.bounds.w, l_index ) );
+    }
   }
-  fb.clear();
   
   /* Render the top status line. */
 #pragma GCC diagnostic ignored "-Wformat"
@@ -225,11 +241,11 @@ void game_render( void )
 #pragma GCC diagnostic pop
   
   /* Lives are tricky, we can run out of space... */
-  if ( m_lives < 4 )
+  if ( m_lives < 5 )
   {
-    for ( l_index = 0; l_index < m_lives; l_index++ )
+    for ( l_index = 0; l_index < ( m_lives - 1 ); l_index++ )
     {
-      sprite_render( "bat_normal", 72 - ( ( m_lives - 1 ) * 10 ) + ( l_index * 20 ), 3 );
+      sprite_render( "bat_normal", 72 - ( ( m_lives - 2 ) * 10 ) + ( l_index * 20 ), 3 );
     }
   }
   

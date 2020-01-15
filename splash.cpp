@@ -28,6 +28,7 @@
 static rgba      m_text_colour;
 static uint16_t  m_gradient_row;
 
+
 /* Functions. */
 
 using namespace blit;
@@ -72,9 +73,9 @@ void splash_render( void )
     //fb.pen( rgba( 32 + ( l_row / 2 ), 32, 0, 255 ) );
     fb.pen( 
       rgba( 
-        (int)( 64.0f + 48.0f * ( sin( M_PIf32 * 2 / fb.bounds.h * l_row  ) ) ), 
+        (int)( 64.0f + 48.0f * ( sin( M_PI * 2 / fb.bounds.h * l_row  ) ) ), 
         0, 
-        (int)( 64.0f + 48.0f * ( cos( M_PIf32 * 2 / fb.bounds.h * l_row ) ) ), 
+        (int)( 64.0f + 48.0f * ( cos( M_PI * 2 / fb.bounds.h * l_row ) ) ), 
         255 
       )
     );

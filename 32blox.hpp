@@ -21,8 +21,10 @@
 /* Constants. */
 
 #define MAX_BALLS     5
+#define MAX_SCORES    10
 #define BOARD_WIDTH   10
 #define BOARD_HEIGHT  10
+
 
 /* Enums. */
 
@@ -76,6 +78,12 @@ bool        ball_stuck( uint8_t );
 void        game_init( void );
 void        game_render( void );
 gamestate_t game_update( uint32_t );
+
+void        hiscore_init( void );
+uint32_t    hiscore_get_score( uint8_t );
+void        hiscore_save_score( uint32_t, const char * );
+gamestate_t hiscore_update( uint32_t );
+void        hiscore_render( void );
 
 void        level_init( uint8_t );
 uint8_t    *level_get_line( uint8_t );
