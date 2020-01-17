@@ -92,7 +92,7 @@ void game_init( void )
   
   /* Set the player stats to an opening value. */
   m_score = 0;
-  m_lives = 1;
+  m_lives = 3;
   m_level = 1;
   m_speed = 1.1f;
   m_flash = false;
