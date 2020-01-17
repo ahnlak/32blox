@@ -27,6 +27,7 @@
 #include "32blit.hpp"
 #include "32blox.hpp"
 
+#include "32bee.h"
 
 /* Module variables. */
 
@@ -153,9 +154,10 @@ gamestate_t hiscore_update( uint32_t p_time )
 
 void hiscore_render( void )
 {
-  uint8_t  l_index;
-  uint16_t l_row;
-  char     l_buffer[32];
+  uint8_t       l_index;
+  uint16_t      l_row;
+  char          l_buffer[32];
+  bee_point_t   l_point;
   
   /* Clear the screen to a nice shifting gradient. */
   for( l_row = 0; l_row < fb.bounds.h; l_row++ )
@@ -175,7 +177,9 @@ void hiscore_render( void )
   
   /* Title the screen, although it's probably pretty obvious... */
   fb.pen( rgba( 255, 255, 255, 255 ) );
-  fb.text( "HIGH SCORES", &outline_font[0][0], point( 52, 1 ), true );
+  l_point.x = fb.bounds.w / 2;
+  l_point.y = 1;
+  bee_text( &l_point, BEE_ALIGN_CENTRE, "HIGH SCORES" );
   
   /* Now just render the list, with a nice colour gradient. */
   for ( l_index = 0; l_index < MAX_SCORES; l_index++ )
@@ -188,14 +192,15 @@ void hiscore_render( void )
     
     /* So, set the pen a little darker. */
     fb.pen( rgba( 255 - ( 15 * l_index ), 255 - ( 25 * l_index ), 255 - ( 15 * l_index ), 255 ) );
-    sprintf( l_buffer, "%05d  %c %c %c", m_scores[l_index].score,
+    l_point.y = 14 + ( 8 * l_index );
+    bee_text( &l_point, BEE_ALIGN_CENTRE, "%05d %c %c %c",  m_scores[l_index].score,
              m_scores[l_index].name[0], m_scores[l_index].name[1], m_scores[l_index].name[2] );
-    fb.text( l_buffer, &outline_font[0][0], point( 52, 14 + ( 8 * l_index ) ), true );
   }
   
   /* Lastly, the text inviting the user to press the start button. */
   fb.pen( m_text_colour );
-  fb.text( "PRESS 'A' TO START", &outline_font[0][0], point( 34, 100 ), true );
+  l_point.y = 100;
+  bee_text( &l_point, BEE_ALIGN_CENTRE, "PRESS 'A' TO START" );
 }
 
 

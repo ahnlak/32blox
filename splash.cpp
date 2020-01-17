@@ -22,6 +22,8 @@
 #include "32blit.hpp"
 #include "32blox.hpp"
 
+#include "32bee.h"
+
 
 /* Module variables. */
 
@@ -65,7 +67,8 @@ gamestate_t splash_update( uint32_t p_time )
 
 void splash_render( void )
 {
-  uint16_t l_row;
+  uint16_t    l_row;
+  bee_point_t l_point;
   
   /* Clear the screen to a nice shifting gradient. */
   for( l_row = 0; l_row < fb.bounds.h; l_row++ )
@@ -105,7 +108,9 @@ void splash_render( void )
   
   /* Lastly, the text inviting the user to press the start button. */
   fb.pen( m_text_colour );
-  fb.text( "PRESS 'A' TO START", &outline_font[0][0], point( 34, 100 ), true );
+  l_point.x = fb.bounds.w / 2;
+  l_point.y = 100;
+  bee_text( &l_point, BEE_ALIGN_CENTRE, "PRESS 'A' TO START" );
 }
 
 

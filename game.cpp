@@ -23,6 +23,8 @@
 #include "32blit.hpp"
 #include "32blox.hpp"
 
+#include "32bee.h"
+
 
 /* Module variables. */
 
@@ -200,10 +202,10 @@ gamestate_t game_update( uint32_t p_time )
 
 void game_render( void )
 {
-  uint8_t   l_index, l_brick;
-  float     l_red, l_green, l_blue;
-  char      l_buffer[32];
-  uint8_t  *l_line;
+  uint8_t       l_index, l_brick;
+  float         l_red, l_green, l_blue;
+  uint8_t      *l_line;
+  bee_point_t   l_point;
   
   /* Clear the screen back to something sensible. */
   if ( m_flash )
@@ -234,10 +236,10 @@ void game_render( void )
   /* Render the top status line. */
 #pragma GCC diagnostic ignored "-Wformat"
   fb.pen( rgba( 255, 255, 255, 255 ) );
-  sprintf( l_buffer, "HI: %05lu", m_hiscore );
-  fb.text( l_buffer, &minimal_font[0][0], point( 1, 1 ), true );
-  sprintf( l_buffer, "SC: %05lu", m_score );
-  fb.text( l_buffer, &minimal_font[0][0], point( 115, 1 ), true );
+  l_point.x = l_point.y = 1;
+  bee_text( &l_point, BEE_ALIGN_NONE, "HI:%05lu", m_hiscore );
+  l_point.x = fb.bounds.w - 2;
+  bee_text( &l_point, BEE_ALIGN_RIGHT, "SC:%05lu", m_score );
 #pragma GCC diagnostic pop
   
   /* Lives are tricky, we can run out of space... */
@@ -284,9 +286,11 @@ void game_render( void )
       if ( ( ball_stuck( m_balls[l_index] ) ) && ( level_get_bricks() > 0 ) )
       {
         fb.pen( m_text_colour );
-        sprintf( l_buffer, "LEVEL %02d", m_level );
-        fb.text( l_buffer, &outline_font[0][0], point( 59, 92 ), true );
-        fb.text( "PRESS 'B' TO LAUNCH", &outline_font[0][0], point( 32, 100 ), true );
+        l_point.x = fb.bounds.w / 2;
+        l_point.y = 92;
+        bee_text( &l_point, BEE_ALIGN_CENTRE, "LEVEL %02d", m_level );
+        l_point.y = 100;
+        bee_text( &l_point, BEE_ALIGN_CENTRE, "PRESS 'B' TO LAUNCH" );
       }
     }
   }
@@ -295,9 +299,11 @@ void game_render( void )
   if ( level_get_bricks() == 0 )
   {
     fb.pen( m_text_colour );
-    sprintf( l_buffer, "LEVEL %02d CLEARED", m_level );
-    fb.text( l_buffer, &outline_font[0][0], point( 40, 46 ), true );
-    fb.text( "GET READY!", &outline_font[0][0], point( 59, 60 ), true );
+    l_point.x = fb.bounds.w / 2;
+    l_point.y = 46;
+    bee_text( &l_point, BEE_ALIGN_CENTRE, "LEVEL %02d CLEARED", m_level );
+    l_point.y = 60;
+    bee_text( &l_point, BEE_ALIGN_CENTRE, "GET READY!" );
   }
 }
 
