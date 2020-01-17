@@ -66,8 +66,6 @@ static bool check_brick_hit( uint16_t p_row, uint16_t p_column, uint16_t p_newx,
 
 /* Functions. */
 
-using namespace blit;
-
 
 /*
  * ball_create - generate a new player ball, on the player bat
@@ -128,7 +126,6 @@ int8_t ball_update( uint8_t p_ballid, bat_t p_bat )
 {
   uint8_t  l_score = 0;
   uint8_t  l_row, l_column;
-  uint8_t *l_bricks;
   uint16_t l_newx, l_newy;
   float    l_edge, l_speed;
   size     l_ballsize = sprite_size( "ball" );
@@ -157,14 +154,14 @@ int8_t ball_update( uint8_t p_ballid, bat_t p_bat )
     m_balls[p_ballid].dx *= -1.0f;
     l_score++;
   }
-  if ( ( l_newy <= 0 ) || ( l_newy >= fb.bounds.w ) )
+  if ( ( l_newy <= 0 ) || ( l_newy >= blit::fb.bounds.w ) )
   {
     m_balls[p_ballid].dy *= -1.0f;
     l_score++;
   }
   
   /* If we've hit the bottom, though, we have bigger problems. */
-  if ( l_newx >= fb.bounds.h )
+  if ( l_newx >= blit::fb.bounds.h )
   {
     m_balls[p_ballid].active = 0;
     return -1;

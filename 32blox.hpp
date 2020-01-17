@@ -75,14 +75,18 @@ void        ball_render( uint8_t );
 void        ball_launch( uint8_t );
 bool        ball_stuck( uint8_t );
 
+bool        death_check_score( uint32_t );
+gamestate_t death_update( void );
+void        death_render( void );
+
 void        game_init( void );
 void        game_render( void );
-gamestate_t game_update( uint32_t );
+gamestate_t game_update( void );
 
 void        hiscore_init( void );
 uint32_t    hiscore_get_score( uint8_t );
 void        hiscore_save_score( uint32_t, const char * );
-gamestate_t hiscore_update( uint32_t );
+gamestate_t hiscore_update( void );
 void        hiscore_render( void );
 
 void        level_init( uint8_t );
@@ -92,7 +96,7 @@ const char *level_get_bricktype( uint8_t );
 uint16_t    level_get_bricks( void );
 
 void        splash_render( void );
-gamestate_t splash_update( uint32_t );
+gamestate_t splash_update( void );
 
 void        sprite_render( const char *, int16_t, int16_t, spritealign_t = ALIGN_TOPLEFT );
 size        sprite_size( const char * );

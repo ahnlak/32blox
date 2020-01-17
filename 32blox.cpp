@@ -29,7 +29,6 @@ static gamestate_t m_gamestate = STATE_SPLASH;
 
 /* Functions. */
 
-using namespace blit;
 
 /*
  * init - called once on startup to initialise the game.
@@ -42,8 +41,8 @@ void init( void )
   blit::set_screen_mode( screen_mode::lores );
 
   /* And blank the screen. */
-  fb.pen( rgba( 100, 0, 0, 255 ) );
-  fb.clear();
+  blit::fb.pen( rgba( 100, 0, 0, 255 ) );
+  blit::fb.clear();
   
   /* Set the initial gamestate (which should be redundant, but...) */
   m_gamestate = STATE_SPLASH;
@@ -66,7 +65,7 @@ void update( uint32_t p_time )
   switch( m_gamestate ) {
 
     case STATE_SPLASH:      /* Show the user a simple splash screen. */
-      m_gamestate = splash_update( p_time );
+      m_gamestate = splash_update();
       if ( m_gamestate == STATE_GAME )
       {
         game_init();
@@ -74,15 +73,15 @@ void update( uint32_t p_time )
       break;
       
     case STATE_GAME:        /* The player is, well, playing! */
-      m_gamestate = game_update( p_time );
+      m_gamestate = game_update();
       break;
       
     case STATE_DEATH:       /* The game is done. Save the score. */
-      m_gamestate = STATE_HISCORE;
+      m_gamestate = death_update();
       break;
       
     case STATE_HISCORE:     /* Show the high scores. */
-      m_gamestate = hiscore_update( p_time );
+      m_gamestate = hiscore_update();
       if ( m_gamestate == STATE_GAME )
       {
         game_init();
@@ -114,6 +113,10 @@ void render( uint32_t p_time )
       
     case STATE_GAME:        /* The player is, well, playing! */
       game_render();
+      break;
+      
+    case STATE_DEATH:       /* Get the player name, if there's a high score. */
+      death_render();
       break;
       
     case STATE_HISCORE:     /* Show the high scores. */

@@ -28,23 +28,57 @@
 
 /* Module variables. */
 
-static struct { const char *name; } m_bats[BAT_MAX];
+static rgba         m_text_colour;
+static uint32_t     m_hiscore;
+static uint32_t     m_score;
+static uint8_t      m_lives;
+static uint8_t      m_level;
+static float        m_speed;
+static bool         m_flash;
+static int8_t       m_balls[MAX_BALLS];
+static bat_t        m_player;
+static blit::timer  m_flicker_timer, m_level_timer;
+static bool         m_waited;
+static struct { 
+  const char *name; 
+}                   m_bats[BAT_MAX];
 
-static rgba      m_text_colour;
-static uint32_t  m_hiscore;
-static uint32_t  m_score;
-static uint8_t   m_lives;
-static uint8_t   m_level;
-static float     m_speed;
-static bool      m_flash;
-static int8_t    m_balls[MAX_BALLS];
-static bat_t     m_player;
-static uint32_t  m_timer;
+
+/* Module functions. */
+
+/*
+ * _game_flicker_timer_update - callback for the font flicker and background
+ */
+
+void _game_flicker_timer_update( blit::timer &p_timer )
+{
+  static uint16_t ls_loopcount = 0;
+  
+  /* Update the text colour used for flickeringness. */
+  if ( ( ls_loopcount += 25 ) > 1200 ) 
+  {
+    ls_loopcount = 0;
+  }
+  m_text_colour = blit::rgba( 
+                              ls_loopcount % 255, 
+                              ( ls_loopcount % 512 ) / 2, 
+                              255 - ( ls_loopcount % 255 ),
+                              255
+                            );
+}
+
+/*
+ * _game_level_timer_update - pauses at the end of the level.
+ */
+
+void _game_level_timer_update( blit::timer &p_timer )
+{
+  m_waited = true;
+  p_timer.stop();
+}
 
 
 /* Functions. */
-
-using namespace blit;
 
 /*
  * game_init - called at the start of a new game, to blank scores and
@@ -58,16 +92,18 @@ void game_init( void )
   
   /* Set the player stats to an opening value. */
   m_score = 0;
-  m_lives = 3;
+  m_lives = 1;
   m_level = 1;
   m_speed = 1.1f;
   m_flash = false;
-  m_timer = 0;
   
   m_player.type = BAT_NORMAL;
-  m_player.position = fb.bounds.w / 2;
-  m_player.baseline = fb.bounds.h - 8;
+  m_player.position = blit::fb.bounds.w / 2;
+  m_player.baseline = blit::fb.bounds.h - 8;
   m_player.width = sprite_size( m_bats[BAT_NORMAL].name ).w;
+  
+  m_level_timer.init( _game_level_timer_update, 1500, 0 );
+  m_waited = false;
   
   /* Initialise that level. */
   level_init( m_level );
@@ -83,20 +119,22 @@ void game_init( void )
 /*
  * game_update - handle playing the game.
  *
- * uint32_t - the gametick so that we animate at a known rate.
- * 
  * Returns gamestate_t, the state to continue in. Should either be GAME, 
  * or DEATH if the player fails.
  */
 
-gamestate_t game_update( uint32_t p_time )
+gamestate_t game_update( void )
 {
   int8_t  l_score;
   uint8_t l_index;
   
-  /* Update the flickering prompt text. */
-  m_text_colour = rgba( p_time % 255, ( p_time % 512 ) / 2, 255 - (p_time % 255), 255 );
-  
+  /* If it's not running, we need to set up the flicker timer. */
+  if ( !m_flicker_timer.is_running() )
+  {
+    m_flicker_timer.init( _game_flicker_timer_update, 20, -1 );
+    m_flicker_timer.start();
+  }
+    
   /* See if the player is moving left. */
   if ( ( blit::pressed( blit::button::DPAD_LEFT ) ) || ( blit::joystick.x < -0.1f ) )
   {
@@ -111,14 +149,14 @@ gamestate_t game_update( uint32_t p_time )
   if ( ( blit::pressed( blit::button::DPAD_RIGHT ) ) || ( blit::joystick.x > 0.1f ) )
   {
     /* Don't let them go outside of bounds. */
-    if ( ( m_player.position += m_speed ) > ( fb.bounds.w - ( m_player.width / 2 ) ) )
+    if ( ( m_player.position += m_speed ) > ( blit::fb.bounds.w - ( m_player.width / 2 ) ) )
     {
       m_player.position -= m_speed;
     }
   }
   
-  /* If they press the Y button, launch any balls we're currently holding. */
-  if ( blit::pressed( blit::button::B ) )
+  /* If they press the B button, launch any balls we're currently holding. */
+  if ( ( blit::pressed( blit::button::B ) ) && ( level_get_bricks() > 0 ) )
   {
     for ( l_index = 0; l_index < MAX_BALLS; l_index++ )
     {
@@ -163,9 +201,12 @@ gamestate_t game_update( uint32_t p_time )
   {
     if ( --m_lives <=0 )
     {
-      /* __RETURN__ */
-      hiscore_save_score( m_score, "PJF" );
-      return STATE_DEATH;
+      m_flicker_timer.stop();
+      if ( death_check_score( m_score ) )
+      {
+        return STATE_DEATH;
+      }
+      return STATE_HISCORE;
     }
     m_balls[0] = ball_create( m_player );
   }
@@ -173,21 +214,20 @@ gamestate_t game_update( uint32_t p_time )
   /* If we've run out of bricks then the level is cleared. */
   if ( level_get_bricks() == 0 )
   {
+    printf( "end of level - waiting is %d\n", m_waited );
     /* If the timer isn't running, then start it. */
-    if ( m_timer == 0 )
+    if ( !m_waited && !m_level_timer.is_running() )
     {
-      m_timer = p_time;
+      printf( "start timer\n" );
+      m_level_timer.start();
       memset( m_balls, -1, MAX_BALLS );
       m_balls[0] = ball_create( m_player );
     }
-    else
+    else if ( m_waited )
     {
+      printf( "start new level\n" );
       /* If we've shown "you're a winner!" long enough, jump to the next level. */
-      if ( ( m_timer + 2500 ) < p_time )
-      {
-        m_timer = 0;
-        level_init( ++m_level );
-      }
+      level_init( ++m_level );
     }
   }
   
@@ -206,39 +246,45 @@ void game_render( void )
   float         l_red, l_green, l_blue;
   uint8_t      *l_line;
   bee_point_t   l_point;
+  bee_font_t    l_outline_font, l_minimal_font;
   
   /* Clear the screen back to something sensible. */
   if ( m_flash )
   {
-    fb.pen( rgba( 240, 0, 0, 255 ) );
+    blit::fb.pen( rgba( 240, 0, 0, 255 ) );
     m_flash = false;
   }
   else
   {
     /* Basically black. */
-    fb.pen( rgba( 0, 0, 0, 255 ) );
-    fb.clear();
+    blit::fb.pen( rgba( 0, 0, 0, 255 ) );
+    blit::fb.clear();
     
     /* But let's put a nice dark gradient in there, based on level. */
     l_red = ( m_level * 5 ) % 64;
     l_green = ( 64 - ( m_level * 4 ) ) % 64;
     l_blue = 0;
-    for( l_index = 0; l_index < fb.bounds.h - 16; l_index++ )
+    for( l_index = 0; l_index < blit::fb.bounds.h - 16; l_index++ )
     {
-      fb.pen( rgba( l_red - ( l_red * l_index / ( fb.bounds.h - 16.0 ) ), 
-                    l_green - ( l_green * l_index / ( fb.bounds.h - 16.0 ) ), 
-                    l_blue - ( l_blue * l_index / ( fb.bounds.h - 16.0 ) ), 
+      blit::fb.pen( rgba( l_red - ( l_red * l_index / ( blit::fb.bounds.h - 16.0 ) ), 
+                    l_green - ( l_green * l_index / ( blit::fb.bounds.h - 16.0 ) ), 
+                    l_blue - ( l_blue * l_index / ( blit::fb.bounds.h - 16.0 ) ), 
                     255 ) );
-      fb.line( point( 0, l_index ), point( fb.bounds.w, l_index ) );
+      blit::fb.line( point( 0, l_index ), point( blit::fb.bounds.w, l_index ) );
     }
   }
   
+  /* Get hold of the fonts in our new renderer. */
+  memcpy( &l_outline_font, bee_text_create_fixed_font( outline_font ), sizeof( bee_font_t ) );
+  memcpy( &l_minimal_font, bee_text_create_fixed_font( minimal_font ), sizeof( bee_font_t ) );
+  
   /* Render the top status line. */
 #pragma GCC diagnostic ignored "-Wformat"
-  fb.pen( rgba( 255, 255, 255, 255 ) );
+  blit::fb.pen( rgba( 255, 255, 255, 255 ) );
+  bee_text_set_font( &l_minimal_font );
   l_point.x = l_point.y = 1;
   bee_text( &l_point, BEE_ALIGN_NONE, "HI:%05lu", m_hiscore );
-  l_point.x = fb.bounds.w - 2;
+  l_point.x = blit::fb.bounds.w - 2;
   bee_text( &l_point, BEE_ALIGN_RIGHT, "SC:%05lu", m_score );
 #pragma GCC diagnostic pop
   
@@ -252,8 +298,8 @@ void game_render( void )
   }
   
   /* Underline that, to form a hard border to bounce off at the top. */
-  fb.pen( rgba( 255, 255, 255, 255 ) );
-  fb.line( point( 0, 9 ), point( fb.bounds.w, 9 ) );
+  blit::fb.pen( rgba( 255, 255, 255, 255 ) );
+  blit::fb.line( point( 0, 9 ), point( blit::fb.bounds.w, 9 ) );
   
   /* Now we draw up the surviving bricks in the level. */
   for ( l_index = 0; l_index < 10; l_index++ )
@@ -285,21 +331,25 @@ void game_render( void )
       ball_render( m_balls[l_index] );
       if ( ( ball_stuck( m_balls[l_index] ) ) && ( level_get_bricks() > 0 ) )
       {
-        fb.pen( m_text_colour );
-        l_point.x = fb.bounds.w / 2;
-        l_point.y = 92;
+        blit::fb.pen( m_text_colour );
+        bee_text_set_font( &l_outline_font );
+        l_point.x = blit::fb.bounds.w / 2;
+        l_point.y = 82;
         bee_text( &l_point, BEE_ALIGN_CENTRE, "LEVEL %02d", m_level );
-        l_point.y = 100;
+        l_point.y = 90;
         bee_text( &l_point, BEE_ALIGN_CENTRE, "PRESS 'B' TO LAUNCH" );
       }
     }
   }
   
   /* Any falling debris, specials or effects. */
+  
+  /* And if the level is completed, let them know! */
   if ( level_get_bricks() == 0 )
   {
-    fb.pen( m_text_colour );
-    l_point.x = fb.bounds.w / 2;
+    blit::fb.pen( m_text_colour );
+    bee_text_set_font( &l_outline_font );
+    l_point.x = blit::fb.bounds.w / 2;
     l_point.y = 46;
     bee_text( &l_point, BEE_ALIGN_CENTRE, "LEVEL %02d CLEARED", m_level );
     l_point.y = 60;

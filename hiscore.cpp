@@ -31,14 +31,41 @@
 
 /* Module variables. */
 
-static struct { uint32_t score; char name[3]; } m_scores[MAX_SCORES];
-static rgba      m_text_colour;
-static uint16_t  m_gradient_row;
+static rgba         m_text_colour;
+static uint16_t     m_gradient_row;
+static blit::timer  m_flicker_timer;
+static struct { 
+  uint32_t score; 
+  char name[3]; 
+}                   m_scores[MAX_SCORES];
+
+
+/* Module functions. */
+
+/*
+ * _hiscore_flicker_timer_update - callback for the font flicker and background
+ */
+
+void _hiscore_flicker_timer_update( blit::timer &p_timer )
+{
+  static uint16_t ls_loopcount = 0;
+  
+  /* Update the text colour used for flickeringness. */
+  if ( ( ls_loopcount += 25 ) > 1200 ) 
+  {
+    ls_loopcount = 0;
+  }
+  m_text_colour = blit::rgba( 
+                              ls_loopcount % 255, 
+                              ( ls_loopcount % 512 ) / 2, 
+                              255 - ( ls_loopcount % 255 ),
+                              255
+                            );
+  m_gradient_row = ( ls_loopcount / 10 ) % 120;
+}
 
 
 /* Functions. */
-
-using namespace blit;
 
 
 /*
@@ -126,20 +153,22 @@ void hiscore_save_score( uint32_t p_score, const char *p_name )
 /*
  * hiscore_update - updates the high score display in the normal gameloop.
  * 
- * uint32_t - the time tick of the update, in milliseconds.
- * 
  * Returns the new gamestate.
  */
 
-gamestate_t hiscore_update( uint32_t p_time )
+gamestate_t hiscore_update( void )
 {
-  /* Update the flickering prompt text. */
-  m_text_colour = rgba( p_time % 255, ( p_time % 512 ) / 2, 255 - (p_time % 255), 255 );
-  m_gradient_row = ( p_time / 10 ) % 120;
+  /* If it's not running, we need to set up the flicker timer. */
+  if ( !m_flicker_timer.started )
+  {
+    m_flicker_timer.init( _hiscore_flicker_timer_update, 20, -1 );
+    m_flicker_timer.start();
+  }
   
   /* Check to see if the player has pressed the start button. */
   if ( blit::pressed( blit::button::A ) )
   {
+    m_flicker_timer.stop();
     return STATE_GAME;
   }
   
@@ -156,28 +185,31 @@ void hiscore_render( void )
 {
   uint8_t       l_index;
   uint16_t      l_row;
-  char          l_buffer[32];
   bee_point_t   l_point;
+  bee_font_t    l_outline_font;
   
   /* Clear the screen to a nice shifting gradient. */
-  for( l_row = 0; l_row < fb.bounds.h; l_row++ )
+  for( l_row = 0; l_row < blit::fb.bounds.h; l_row++ )
   {
-    //fb.pen( rgba( 32 + ( l_row / 2 ), 32, 0, 255 ) );
-    fb.pen( 
-      rgba( 
-        (int)( 64.0f + 48.0f * ( sin( M_PI * 2 / fb.bounds.h * l_row  ) ) ), 
+    blit::fb.pen( 
+      blit::rgba( 
+        (int)( 64.0f + 48.0f * ( sin( M_PI * 2 / blit::fb.bounds.h * l_row  ) ) ), 
         0, 
-        (int)( 64.0f + 48.0f * ( cos( M_PI * 2 / fb.bounds.h * l_row ) ) ), 
+        (int)( 64.0f + 48.0f * ( cos( M_PI * 2 / blit::fb.bounds.h * l_row ) ) ), 
         255 
       )
     );
-    fb.line( point( 0, ( l_row + m_gradient_row ) % fb.bounds.h ), 
-             point( fb.bounds.w, ( l_row + m_gradient_row ) % fb.bounds.h ) );
+    blit::fb.line( point( 0, ( l_row + m_gradient_row ) % blit::fb.bounds.h ), 
+             point( blit::fb.bounds.w, ( l_row + m_gradient_row ) % blit::fb.bounds.h ) );
   }
   
+  /* Get hold of the outline font in our new renderer. */
+  memcpy( &l_outline_font, bee_text_create_fixed_font( outline_font ), sizeof( bee_font_t ) );
+  bee_text_set_font( &l_outline_font );
+  
   /* Title the screen, although it's probably pretty obvious... */
-  fb.pen( rgba( 255, 255, 255, 255 ) );
-  l_point.x = fb.bounds.w / 2;
+  blit::fb.pen( rgba( 255, 255, 255, 255 ) );
+  l_point.x = blit::fb.bounds.w / 2;
   l_point.y = 1;
   bee_text( &l_point, BEE_ALIGN_CENTRE, "HIGH SCORES" );
   
@@ -191,14 +223,14 @@ void hiscore_render( void )
     }
     
     /* So, set the pen a little darker. */
-    fb.pen( rgba( 255 - ( 15 * l_index ), 255 - ( 25 * l_index ), 255 - ( 15 * l_index ), 255 ) );
+    blit::fb.pen( rgba( 255 - ( 15 * l_index ), 255 - ( 25 * l_index ), 255 - ( 15 * l_index ), 255 ) );
     l_point.y = 14 + ( 8 * l_index );
     bee_text( &l_point, BEE_ALIGN_CENTRE, "%05d %c %c %c",  m_scores[l_index].score,
              m_scores[l_index].name[0], m_scores[l_index].name[1], m_scores[l_index].name[2] );
   }
   
   /* Lastly, the text inviting the user to press the start button. */
-  fb.pen( m_text_colour );
+  blit::fb.pen( m_text_colour );
   l_point.y = 100;
   bee_text( &l_point, BEE_ALIGN_CENTRE, "PRESS 'A' TO START" );
 }
