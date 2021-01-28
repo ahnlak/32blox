@@ -1,3 +1,12 @@
+NOTICE
+======
+
+This is a very early version of 32Blox, which has largely been re-written
+and can be found at https://github.com/ahnlak-blit32 - the code here is pretty
+incompatible with the current 32blit API, and is only left here for historical
+interest.
+
+
 32Blox
 ======
 
